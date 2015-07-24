@@ -48,7 +48,7 @@ class JaggedRawStore(object):
         """
         raise NotImplementedError()
 
-    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
+    def get(self, segments=None, columns=None, factory=None, contiguity=None):
         """Returns a list with the data specified in `segments` (and `columns`), possibly transformed by `factory`.
 
         Concrete implementations may warrant things like "all segments actually lie in congiguous regions in memory".
@@ -72,8 +72,10 @@ class JaggedRawStore(object):
                        this can potentially speed up operations reading these data in the order specified by segments
              - 'write': a best effort should be done to write segments sequentially in memory;
                         this can potentially speed up retrieval
-             None: do not force any contiguity
-           usually 'read' is a good idea
+             - None: do not force any contiguity
+           usually 'read' can be a good idea for analysis
+           beware that forcing contiguity for speed might lead to memory leaks
+           (the whole retrieved segments won't be released while any of them is reacheable)
 
         Returns
         -------
@@ -163,9 +165,7 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
     #
 
     # Check for valid contiguity
-    if contiguity is None:
-        contiguity = 'read'
-    if contiguity not in ('read', 'write'):
+    if contiguity not in ('read', 'write', None):
         raise Exception('Unknown contiguity scheme: %r' % contiguity)
 
     # Check query sanity
@@ -174,9 +174,6 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
         if (base + size) > ne or base < 0:
             raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
         total_size += size
-
-    # Hope for one-malloc only
-    dest = np.empty((total_size, nc), dtype=dtype)
 
     # Prepare query. dest_base allows to both
     #   - unsort at the end to keep the requested order
@@ -190,12 +187,16 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
     # Retrieve
     views = []
     if contiguity == 'read':
+        # Hope for one-malloc only, but beware of memory leaks
+        dest = np.empty((total_size, nc), dtype=dtype)
         # Populate
         for base, dest_base, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
             reader(base, size, view)
             views.append((dest_base, view))
     elif contiguity == 'write':
+        # Hope for one-malloc only, but beware of memory leaks
+        dest = np.empty((total_size, nc), dtype=dtype)
         # Populate
         dest_base = 0
         for base, order, size in sorted(query_dest):
@@ -203,6 +204,11 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
             reader(base, size, view)
             views.append((order, view))
             dest_base += size
+    else:
+        for base, order, size in sorted(query_dest):
+            view = np.empty((size, nc), dtype=dtype)
+            reader(base, size, view)
+            views.append((order, view))
 
     # Unpack views while restoring original order
     # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
