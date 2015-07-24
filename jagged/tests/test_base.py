@@ -5,9 +5,10 @@ import bcolz
 import numpy as np
 import pytest
 from jagged.bcolz_backend import JaggedByCarray
+from jagged.h5py_backend import JaggedByH5Py
 
 
-@pytest.yield_fixture(params=[JaggedByCarray])
+@pytest.yield_fixture(params=[JaggedByCarray, JaggedByH5Py])
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()

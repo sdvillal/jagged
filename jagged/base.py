@@ -26,7 +26,7 @@ except ImportError:
 
 # --- Raw stores
 
-@whatable
+@whatable(add_properties=False)
 class JaggedRawStore(object):
     """Persistent storage of objects of the same type but different length."""
 

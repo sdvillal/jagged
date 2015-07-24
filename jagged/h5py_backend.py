@@ -5,28 +5,25 @@ import numpy as np
 import h5py
 from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
-from whatami import whatable
-
-
-# CHUNKING MATTERS!!!
-# Be able to specify dtype
 
 
 class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
-                 path,  # maybe we could also pass the path to the dset inside the h5py file
+                 path=None,  # make this path + optionally path inside the hdf5?
                  write=False):
         super(JaggedByH5Py, self).__init__()
         self._write = write
-        self._path = ensure_dir(op.join(path, self.what().id()))
-        self._path = op.join(self._path, 'data.h5')
+        self._path = path
+        if path is not None:
+            self._path = op.join(self._path, 'data.h5')
         self._h5 = None
         self._dset = None
 
     def append(self, data):
+
         if not self._write:
-            raise Exception('Reading data from repository, cannot write (yes, as you write it!)')
+            raise Exception('Cannot write while reading data from repository %s' % self.what().id())
 
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='a')
@@ -51,16 +48,16 @@ class JaggedByH5Py(JaggedRawStore):
     def get(self, segments, columns=None, factory=None):
 
         # Oversimplified design
-        if self.is_writing():
-            raise Exception('Writing data to repository, cannot read (yes, as you read it!)')
+        if self._write:
+            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
 
-        # Sanity checks
+        # Read
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='r')
             self._dset = self._h5['data']
 
+        # Sanity checks
         ne, nc = self._dset.shape
-
         if any((base + size) > ne for base, size in segments):
             raise Exception('Out of bounds query')
 
@@ -74,20 +71,15 @@ class JaggedByH5Py(JaggedRawStore):
         # Retrieve data to a single array
         dest = np.empty((total_size, nc), dtype=self._dset.dtype)
 
-        # does not need to be the optimal strategy, but it usually will
-        # bcolz caches 1 chunk at the moment
         views = []
         for base, dest_base, size in sorted(query_dest):
-            # This is for eval, and this call is not really correct
-            dest[dest_base:dest_base+size] = self._dset[base:(base+size)]  # any way to instruct h5py to copy to the array?
+            # any way to instruct h5py to copy to the array?
+            dest[dest_base:dest_base+size] = self._dset[base:(base+size)]
             views.append((dest_base, dest[dest_base:dest_base+size]))
 
-        views = map(itemgetter(1), sorted(views))
-
-        # We can choose between:
-        #   - contiguity when writing (i.e. write to adjacent positions, order in dest array on increasing base)
-        #   - contiguity for further reads (i.e. make order in dest array as the order of the passed segments)
-        # Probably contiguity for further reads is better.
+        # Unpack views
+        views = [array for _, array in sorted(views, key=itemgetter(0))]
+        # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
 
         # Wrap?
         if factory is None:
@@ -100,10 +92,24 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5.close()
             self._h5 = None
 
-# atexit?
+    @property
+    def shape(self):
+        if self._dset is None:
+            raise Exception('FIXME: the lifecycle is ill defined if calling shape, dtype... before reading or writing')
+        return self._dset.shape
 
-if __name__ == '__main__':
-    with JaggedByH5Py('/home/santi/testh5py', write=True) as jbh:
-        jbh.append(np.zeros((1000, 50)))
-    with JaggedByH5Py('/home/santi/testh5py', write=False) as jbh:
-        print jbh.get([(0, 300)])
+    @property
+    def dtype(self):
+        if self._dset is None:
+            raise Exception('FIXME: the lifecycle is ill defined if calling shape, dtype... before reading or writing')
+        return self._dset.dtype
+
+    @staticmethod
+    def factory(**kwargs):
+        return JaggedByH5Py
+
+#
+# CHUNKING MATTERS!!!
+# Use hdf5 filters/compressors exposed by h5py
+# Be able to specify dtype
+#
