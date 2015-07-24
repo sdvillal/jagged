@@ -1,11 +1,13 @@
 # coding=utf-8
 import os.path as op
+
 import numpy as np
 import h5py
-from jagged.base import JaggedRawStore, retrieve_contiguous
+
+from jagged.base import JaggedRawStoreWithContiguity
 
 
-class JaggedByH5Py(JaggedRawStore):
+class JaggedByH5Py(JaggedRawStoreWithContiguity):
 
     def __init__(self,
                  path=None,
@@ -68,8 +70,8 @@ class JaggedByH5Py(JaggedRawStore):
         if size > 0:
             self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
-    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
-
+    def _open_read(self):
+        """Opens the dataset for reading."""
         # Oversimplified design
         if self._write:
             raise Exception('Cannot read while writing data from repository %s' % self.what.id())
@@ -79,14 +81,8 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5 = h5py.File(self._path, mode='r')
             self._dset = self._h5[self._dset_name]
 
-        # Just read all...
-        if segments is None:
-            return self._dset[:]
-
-        # ...or read the segments
-        ne, nc = self.shape
-        views = retrieve_contiguous(segments, self._read_segment_to, self.dtype, ne, nc, contiguity)
-        return views if factory is None else map(factory, views)
+    def _get_all(self):
+        return self._dset[:]
 
     def close(self):
         if self._h5 is not None:

@@ -149,6 +149,34 @@ class JaggedRawStore(object):
     # Also consider registry to atexit etc.
 
 
+class JaggedRawStoreWithContiguity(JaggedRawStore):
+
+    def _read_segment_to(self, base, size, address):
+        raise NotImplementedError()
+
+    def _open_read(self):
+        raise NotImplementedError()
+
+    def _get_all(self):
+        raise NotImplementedError()
+
+    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
+
+        if self._write:
+            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
+
+        self._open_read()
+
+        # Just read all...
+        if segments is None:
+            return self._get_all()
+
+        # ...or read the segments
+        ne, nc = self.shape
+        views = retrieve_contiguous(segments, self._read_segment_to, self.dtype, ne, nc, contiguity)
+        return views if factory is None else map(factory, views)
+
+
 def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
 
     #

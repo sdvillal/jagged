@@ -1,12 +1,14 @@
 # coding=utf-8
 from functools import partial
+
 import bcolz
-from jagged.base import JaggedRawStore, retrieve_contiguous
+
+from jagged.base import JaggedRawStoreWithContiguity
 from jagged.misc import ensure_dir
 from whatami import whatable
 
 
-class JaggedByCarray(JaggedRawStore):
+class JaggedByCarray(JaggedRawStoreWithContiguity):
 
     def __init__(self,
                  path=None,
@@ -68,23 +70,16 @@ class JaggedByCarray(JaggedRawStore):
 
         return len(self._bcolz) - len(data), len(data)
 
-    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
+    def _read_segment_to(self, base, size, address):
+        self._bcolz._getrange(base, size, address)
 
-        if self._write:
-            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
-
+    def _open_read(self):
         # Open bcolz for reading
         if self._bcolz is None:
             self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
 
-        # Just read all...
-        if segments is None:
-            return self._bcolz[:]
-
-        # ...or read the segments
-        ne, nc = self.shape
-        views = retrieve_contiguous(segments, self._bcolz._getrange, self.dtype, ne, nc, contiguity)
-        return views if factory is None else map(factory, views)
+    def _get_all(self):
+        return self._bcolz[:]
 
     def close(self):
         if self._bcolz is not None and self._write:
