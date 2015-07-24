@@ -4,7 +4,6 @@ import os.path as op
 import numpy as np
 import h5py
 from jagged.base import JaggedRawStore
-from jagged.misc import ensure_dir
 
 
 class JaggedByH5Py(JaggedRawStore):
