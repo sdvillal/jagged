@@ -9,11 +9,15 @@ from jagged.base import JaggedRawStore
 class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
-                 path=None,  # make this path + optionally path inside the hdf5?
+                 path=None,
+                 dset_name='data',
                  write=False):
         super(JaggedByH5Py, self).__init__()
+
         self._write = write
         self._path = path
+        self._dset_name = dset_name
+
         if path is not None:
             self._path = op.join(self._path, 'data.h5')
         self._h5 = None
@@ -27,12 +31,12 @@ class JaggedByH5Py(JaggedRawStore):
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='a')
             if 'data' not in self._h5:
-                self._dset = self._h5.create_dataset('data',
+                self._dset = self._h5.create_dataset(self._dset_name,
                                                      dtype=data.dtype,
                                                      shape=(0, data.shape[1]),
                                                      maxshape=(None, data.shape[1]))
             else:
-                self._dset = self._h5['data']
+                self._dset = self._h5[self._dset_name]
 
         base = self._dset.shape[0]
         size = len(data)
@@ -53,7 +57,7 @@ class JaggedByH5Py(JaggedRawStore):
         # Read
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='r')
-            self._dset = self._h5['data']
+            self._dset = self._h5[self._dset_name]
 
         # Sanity checks
         ne, nc = self._dset.shape
