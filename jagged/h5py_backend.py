@@ -11,7 +11,12 @@ class JaggedByH5Py(JaggedRawStore):
     def __init__(self,
                  path=None,
                  dset_name='data',
-                 write=False):
+                 write=False,
+                 chunks=None,
+                 compression=None,
+                 compression_opts=None,
+                 shuffle=False,
+                 checkum=False):
         super(JaggedByH5Py, self).__init__()
 
         self._write = write
@@ -23,6 +28,12 @@ class JaggedByH5Py(JaggedRawStore):
         self._h5 = None
         self._dset = None
 
+        self.chunks = chunks
+        self.compression = compression
+        self.copts = compression_opts
+        self.shuffle = shuffle
+        self.fletcher32 = checkum
+
     def append(self, data):
 
         if not self._write:
@@ -31,10 +42,16 @@ class JaggedByH5Py(JaggedRawStore):
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='a')
             if 'data' not in self._h5:
+                # http://docs.h5py.org/en/latest/high/dataset.html
                 self._dset = self._h5.create_dataset(self._dset_name,
                                                      dtype=data.dtype,
                                                      shape=(0, data.shape[1]),
-                                                     maxshape=(None, data.shape[1]))
+                                                     maxshape=(None, data.shape[1]),
+                                                     chunks=self.chunks,
+                                                     compression=self.compression,
+                                                     compression_opts=self.copts,
+                                                     shuffle=self.shuffle,
+                                                     fletcher32=self.fletcher32)
             else:
                 self._dset = self._h5[self._dset_name]
 
@@ -77,7 +94,7 @@ class JaggedByH5Py(JaggedRawStore):
         views = []
         for base, dest_base, size in sorted(query_dest):
             # any way to instruct h5py to copy to the array?
-            dest[dest_base:dest_base+size] = self._dset[base:(base+size)]
+            # dest[dest_base:dest_base+size] = self._dset[base:(base+size)]
             views.append((dest_base, dest[dest_base:dest_base+size]))
 
         # Unpack views
