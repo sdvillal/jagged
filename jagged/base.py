@@ -16,7 +16,9 @@ All these classes are `whatable`.
 """
 from __future__ import absolute_import, unicode_literals, print_function
 import os.path as op
+from operator import itemgetter
 from jagged.misc import ensure_dir
+import numpy as np
 from whatami import whatable
 try:
     import cPickle as pickle
@@ -46,7 +48,7 @@ class JaggedRawStore(object):
         """
         raise NotImplementedError()
 
-    def get(self, segments, columns=None, factory=None):
+    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
         """Returns a list with the data specified in `segments` (and `columns`), possibly transformed by `factory`.
 
         Concrete implementations may warrant things like "all segments actually lie in congiguous regions in memory".
@@ -54,7 +56,7 @@ class JaggedRawStore(object):
         Parameters
         ----------
         segments : list of tuples (base, size)
-          specifies which elements to retrieve; if None, the hole data is returned
+          specifies which elements to retrieve; if None, the whole data is returned
 
         columns : list of integers, default None
           specifies which columns to retrieve; if None, retrieve all columns
@@ -62,6 +64,16 @@ class JaggedRawStore(object):
         factory : factory(ndarray)->desired type, default None
           transforms each of the returned elements into a desired type (for example, a pandas DataFrame)
           another use can be to apply summary statistics
+
+        contiguity : string or None, default 'read'
+           indicates the type of contiguity sought for the results; for performance segments retrieval
+           does not need to followdone in any order
+             - 'read': a best effort should be done to leave retrieved segments order-contiguous in memory;
+                       this can potentially speed up operations reading these data in the order specified by segments
+             - 'write': a best effort should be done to write segments sequentially in memory;
+                        this can potentially speed up retrieval
+             None: do not force any contiguity
+           usually 'read' is a good idea
 
         Returns
         -------
@@ -133,6 +145,68 @@ class JaggedRawStore(object):
         return self.shape[0]
 
     # Also consider registry to atexit etc.
+
+
+def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
+
+    #
+    # Retrieving segments by increasing base does not need to be the optimal strategy, but it usually will
+    # For example bcolz caches 1 whole chunk in memory at the moment (apart from some block caching)
+    # (as a side note, therefore be carefull with chunksizes)
+    #
+    # An obvious tweak that could improve performance under certain access patterns
+    # could be to detect overlaps and retrieve accordingly only once, returning appropriate views.
+    # It would be also dangerous (imagine side effects occurring with changing one of the overlapping views)
+    # Not worth the effort or the pain it would cause.
+    #
+    # Lame reinventing the DB wheel
+    #
+
+    # Check for valid contiguity
+    if contiguity is None:
+        contiguity = 'read'
+    if contiguity not in ('read', 'write'):
+        raise Exception('Unknown contiguity scheme: %r' % contiguity)
+
+    # Check query sanity
+    total_size = 0
+    for base, size in segments:
+        if (base + size) > ne or base < 0:
+            raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
+        total_size += size
+
+    # Hope for one-malloc only
+    dest = np.empty((total_size, nc), dtype=dtype)
+
+    # Prepare query. dest_base allows to both
+    #   - unsort at the end to keep the requested order
+    #   - tell where each query must go to (in case of contiguity='read')
+    dest_base = 0
+    query_dest = []
+    for base, size in segments:
+        query_dest.append((base, dest_base, size))
+        dest_base += size
+
+    # Retrieve
+    views = []
+    if contiguity == 'read':
+        # Populate
+        for base, dest_base, size in sorted(query_dest):
+            view = dest[dest_base:dest_base+size]
+            reader(base, size, view)
+            views.append((dest_base, view))
+    elif contiguity == 'write':
+        # Populate
+        dest_base = 0
+        for base, order, size in sorted(query_dest):
+            view = dest[dest_base:dest_base+size]
+            reader(base, size, view)
+            views.append((order, view))
+            dest_base += size
+
+    # Unpack views while restoring original order
+    # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
+    return [array for _, array in sorted(views, key=itemgetter(0))]
 
 
 # --- Index stores

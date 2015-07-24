@@ -1,9 +1,8 @@
 # coding=utf-8
-from operator import itemgetter
 import os.path as op
 import numpy as np
 import h5py
-from jagged.base import JaggedRawStore
+from jagged.base import JaggedRawStore, retrieve_contiguous
 
 
 class JaggedByH5Py(JaggedRawStore):
@@ -65,49 +64,29 @@ class JaggedByH5Py(JaggedRawStore):
     def is_writing(self):
         return self._write
 
-    def get(self, segments, columns=None, factory=None):
+    def _read_segment_to(self, base, size, address):
+        if size > 0:
+            self._dset.read_direct(address, source_sel=np.s_[base:base+size])
+
+    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
 
         # Oversimplified design
         if self._write:
             raise Exception('Cannot read while writing data from repository %s' % self.what.id())
 
-        # Read
+        # Open the dataset for reading
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='r')
             self._dset = self._h5[self._dset_name]
 
-        # Sanity checks
-        ne, nc = self._dset.shape
-        if any((base + size) > ne for base, size in segments):
-            raise Exception('Out of bounds query')
+        # Just read all...
+        if segments is None:
+            return self._dset[:]
 
-        # Prepare query and dest
-        query_dest = []
-        total_size = 0
-        for b, l in segments:
-            query_dest.append((b, total_size, l))
-            total_size += l
-
-        # Retrieve data to a single array
-        dest = np.empty((total_size, nc), dtype=self._dset.dtype)
-
-        views = []
-        for base, dest_base, size in sorted(query_dest):
-            view = dest[dest_base:dest_base+size]
-            # dest[dest_base:dest_base+size] = self._dset[base:(base+size)]
-            if size > 0:
-                self._dset.read_direct(view, source_sel=np.s_[base:base+size])
-            views.append((dest_base, view))
-
-        # Unpack views
-        views = [array for _, array in sorted(views, key=itemgetter(0))]
-        # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
-
-        # Wrap?
-        if factory is None:
-            return views
-
-        return map(factory, views)
+        # ...or read the segments
+        ne, nc = self.shape
+        views = retrieve_contiguous(segments, self._read_segment_to, self.dtype, ne, nc, contiguity)
+        return views if factory is None else map(factory, views)
 
     def close(self):
         if self._h5 is not None:
@@ -117,13 +96,15 @@ class JaggedByH5Py(JaggedRawStore):
     @property
     def shape(self):
         if self._dset is None:
-            raise Exception('FIXME: the lifecycle is ill defined if calling shape, dtype... before reading or writing')
+            return None
+            # FIXME: the lifecycle is ill defined if calling (shape, dtype...) before reading or writing
         return self._dset.shape
 
     @property
     def dtype(self):
         if self._dset is None:
-            raise Exception('FIXME: the lifecycle is ill defined if calling shape, dtype... before reading or writing')
+            return None
+            # FIXME: the lifecycle is ill defined if calling (shape, dtype...) before reading or writing
         return self._dset.dtype
 
     @staticmethod

@@ -1,6 +1,7 @@
 # coding=utf-8
 from __future__ import print_function, absolute_import, unicode_literals
 from functools import partial
+from operator import itemgetter
 import bcolz
 import numpy as np
 import pytest
@@ -13,12 +14,14 @@ def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
     try:
-        yield(partial(jr, path=str(dest)))
+        yield jr, str(dest)
     finally:
         dest.remove(ignore_errors=True)
 
 
 def test_roundtrip(jagged_raw):
+    jagged_raw, path = jagged_raw
+    jagged_raw = partial(jagged_raw, path=path)
     rng = np.random.RandomState(0)
     sizes = range(0, 1000, 100)
     ncol = 10
@@ -28,6 +31,9 @@ def test_roundtrip(jagged_raw):
     segments = []
     with jagged_raw(write=True) as jr:
         total = 0
+        assert jr.dtype is None
+        assert jr.shape is None
+        assert jr.is_writing
         for original in originals:
             base, size = jr.append(original)
             assert base == total
@@ -35,6 +41,8 @@ def test_roundtrip(jagged_raw):
             total += size
             assert len(jr) == total
             segments.append((base, size))
+        assert jr.dtype == originals[0].dtype
+        assert jr.shape == (sum(map(itemgetter(1), segments)), ncol)
 
     # Read
     def test_read(originals, segments):
@@ -49,10 +57,14 @@ def test_roundtrip(jagged_raw):
             for original, roundtripped in zip(originals, jr.get(segments)):
                 assert np.allclose(roundtripped, original)
 
+    # read all
+    with jagged_raw(write=False) as jr:
+        assert np.allclose(np.vstack(originals), jr.get())
+
     # read in insertion order
     test_read(originals, segments)
 
-    # read in randomised order
+    # read in random order
     or_s = list(zip(originals, segments))
     rng.shuffle(or_s)
     originals, segments = zip(*or_s)
@@ -69,5 +81,7 @@ def test_whatid():
                              expectedlen=None).what().id()
 
 
-if __name__ == '__main__':
-    pytest.main()
+def test_factory(jagged_raw):
+    jagged_raw, path = jagged_raw
+    # factory without parameters should give the same config as the constructor
+    assert jagged_raw().what().id() == jagged_raw.factory()().what().id()

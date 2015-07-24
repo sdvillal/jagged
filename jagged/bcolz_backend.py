@@ -1,14 +1,11 @@
 # coding=utf-8
 from functools import partial
-from operator import itemgetter
-import numpy as np
 import bcolz
-from jagged.base import JaggedRawStore
+from jagged.base import JaggedRawStore, retrieve_contiguous
 from jagged.misc import ensure_dir
 from whatami import whatable
 
 
-@whatable(add_properties=False)
 class JaggedByCarray(JaggedRawStore):
 
     def __init__(self,
@@ -71,7 +68,7 @@ class JaggedByCarray(JaggedRawStore):
 
         return len(self._bcolz) - len(data), len(data)
 
-    def get(self, segments, columns=None, factory=None):
+    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
 
         if self._write:
             raise Exception('Cannot read while writing data from repository %s' % self.what.id())
@@ -80,41 +77,13 @@ class JaggedByCarray(JaggedRawStore):
         if self._bcolz is None:
             self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
 
-        # Just read all?
+        # Just read all...
         if segments is None:
             return self._bcolz[:]
 
+        # ...or read the segments
         ne, nc = self.shape
-
-        # Check query sanity
-        if any(((base + size) > ne) or (base < 0) for base, size in segments):
-            raise Exception('Out of bounds query')
-
-        # Prepare query and dest
-        query_dest = []
-        total_size = 0
-        for b, l in segments:
-            query_dest.append((b, total_size, l))
-            total_size += l
-
-        # Retrieve data to a single array
-        dest = np.empty((total_size, nc), dtype=self._bcolz.dtype)
-
-        # does not need to be the optimal strategy, but it usually will
-        # bcolz caches 1 chunk in memory at the moment (does that mean it really reads a whole chunk?)
-        #
-        views = []
-        for i, (base, dest_base, size) in enumerate(sorted(query_dest)):
-            view = dest[dest_base:dest_base+size]
-            self._bcolz._getrange(base, size, view)  # TODO: ask for getrange to be puclic API
-            # dest[dest_base:dest_base+size] = self._bcolz[base:base+size, :]
-            views.append((dest_base, view))
-
-        # Unpack views
-        views = [array for _, array in sorted(views, key=itemgetter(0))]
-        # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
-
-        # print 'Returning...'
+        views = retrieve_contiguous(segments, self._bcolz._getrange, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
 
     def close(self):
@@ -134,6 +103,8 @@ class JaggedByCarray(JaggedRawStore):
 
     @property
     def dtype(self):
+        if self._bcolz is None:
+            return None
         return self._bcolz.dtype
 
 #
@@ -156,3 +127,4 @@ class JaggedByCarray(JaggedRawStore):
 #   - contiguity for further reads (i.e. make order in dest array as the order of the passed segments)
 # Probably contiguity for further reads is better; just for example check speeds of access (way faster)
 #
+# TODO: ask for carray._getrange to be public API
