@@ -21,7 +21,7 @@ setup(
     author='Santi Villalba',
     author_email='sdvillal@gmail.com',
     packages=['jagged',
-              'jagged.benchmarks',
+              # 'jagged.benchmarks',
               'jagged.tests'],
     classifiers=[
         'Intended Audience :: Science/Research',
