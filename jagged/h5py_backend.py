@@ -129,9 +129,3 @@ class JaggedByH5Py(JaggedRawStore):
     @staticmethod
     def factory(**kwargs):
         return JaggedByH5Py
-
-#
-# CHUNKING MATTERS!!!
-# Use hdf5 filters/compressors exposed by h5py
-# Be able to specify dtype
-#
