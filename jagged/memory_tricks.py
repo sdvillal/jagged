@@ -18,7 +18,7 @@ def reduce_while_freeing(xs,
     --------
     This will concatenate 1000 pandas dataframes taking only memory for 1200 at a time.
     It trades not doubling memory with more reallocs / mallocs + memcopys
-    >>> dfs = [pd.DataFrame(np.ones((100, 10))) for _ in xrange(1000)]
+    >>> dfs = [pd.DataFrame(np.ones((100, 10))) for _ in range(1000)]
     >>> cdf = reduce_while_freeing(dfs, batch_size=0.2)
 
     Returns
@@ -44,7 +44,7 @@ def reduce_while_freeing(xs,
 
     reduced = initializer
     while len(xs) > 0:
-        batch = [xs.pop(0) for _ in xrange(min(len(xs), batch_size))]
+        batch = [xs.pop(0) for _ in range(min(len(xs), batch_size))]
         reduced = reduce_function(batch if reduced is None else [reduced] + batch)
 
     return reduced

@@ -53,7 +53,7 @@ def test_roundtrip(jagged_raw):
     test_read(originals, segments)
 
     # read in randomised order
-    or_s = zip(originals, segments)
+    or_s = list(zip(originals, segments))
     rng.shuffle(or_s)
     originals, segments = zip(*or_s)
     test_read(originals, segments)
