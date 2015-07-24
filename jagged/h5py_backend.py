@@ -93,9 +93,11 @@ class JaggedByH5Py(JaggedRawStore):
 
         views = []
         for base, dest_base, size in sorted(query_dest):
-            # any way to instruct h5py to copy to the array?
+            view = dest[dest_base:dest_base+size]
             # dest[dest_base:dest_base+size] = self._dset[base:(base+size)]
-            views.append((dest_base, dest[dest_base:dest_base+size]))
+            if size > 0:
+                self._dset.read_direct(view, source_sel=np.s_[base:base+size])
+            views.append((dest_base, view))
 
         # Unpack views
         views = [array for _, array in sorted(views, key=itemgetter(0))]
