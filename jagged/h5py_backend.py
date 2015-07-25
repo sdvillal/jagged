@@ -66,9 +66,12 @@ class JaggedByH5Py(JaggedRawStoreWithContiguity):
     def is_writing(self):
         return self._write
 
-    def _read_segment_to(self, base, size, address):
+    def _read_segment_to(self, base, size, columns, address):
         if size > 0:
-            self._dset.read_direct(address, source_sel=np.s_[base:base+size])
+            if columns is not None:
+                self._dset.read_direct(address, source_sel=np.s_[base:base+size, columns])
+            else:
+                self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
     def _open_read(self):
         """Opens the dataset for reading."""

@@ -70,8 +70,12 @@ class JaggedByCarray(JaggedRawStoreWithContiguity):
 
         return len(self._bcolz) - len(data), len(data)
 
-    def _read_segment_to(self, base, size, address):
-        self._bcolz._getrange(base, size, address)
+    def _read_segment_to(self, base, size, columns, address):
+        if columns is None:
+            self._bcolz._getrange(base, size, address)
+        else:
+            address[:] = self._bcolz[base:base+size, columns]
+            # FIXME: naive implementation, inefficient for contiguity=None
 
     def _open_read(self):
         # Open bcolz for reading

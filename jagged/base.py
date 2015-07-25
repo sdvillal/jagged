@@ -151,7 +151,7 @@ class JaggedRawStore(object):
 
 class JaggedRawStoreWithContiguity(JaggedRawStore):
 
-    def _read_segment_to(self, base, size, address):
+    def _read_segment_to(self, base, size, columns, address):
         raise NotImplementedError()
 
     def _open_read(self):
@@ -173,11 +173,11 @@ class JaggedRawStoreWithContiguity(JaggedRawStore):
 
         # ...or read the segments
         ne, nc = self.shape
-        views = retrieve_contiguous(segments, self._read_segment_to, self.dtype, ne, nc, contiguity)
+        views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
 
 
-def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
+def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
     #
     # Retrieving segments by increasing base does not need to be the optimal strategy, but it usually will
@@ -196,21 +196,20 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
     if contiguity not in ('read', 'write', None):
         raise Exception('Unknown contiguity scheme: %r' % contiguity)
 
-    # Check query sanity
-    total_size = 0
-    for base, size in segments:
-        if (base + size) > ne or base < 0:
-            raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
-        total_size += size
-
-    # Prepare query. dest_base allows to both
-    #   - unsort at the end to keep the requested order
-    #   - tell where each query must go to (in case of contiguity='read')
+    # Check query sanity and prepare query.
+    # dest_base allows to both:
+    #  - unsort at the end to keep the requested order
+    #  - and tell where each query must go to (in case of contiguity='read')
     dest_base = 0
     query_dest = []
     for base, size in segments:
+        if (base + size) > ne or base < 0:
+            raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
         query_dest.append((base, dest_base, size))
         dest_base += size
+    total_size = dest_base
+
+    nc = len(columns) if columns is not None else nc
 
     # Retrieve
     views = []
@@ -220,7 +219,7 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
         # Populate
         for base, dest_base, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
-            reader(base, size, view)
+            reader(base, size, columns, view)
             views.append((dest_base, view))
     elif contiguity == 'write':
         # Hope for one-malloc only, but beware of memory leaks
@@ -229,13 +228,13 @@ def retrieve_contiguous(segments, reader, dtype, ne, nc, contiguity):
         dest_base = 0
         for base, order, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
-            reader(base, size, view)
+            reader(base, size, columns, view)
             views.append((order, view))
             dest_base += size
     else:
         for base, order, size in sorted(query_dest):
             view = np.empty((size, nc), dtype=dtype)
-            reader(base, size, view)
+            reader(base, size, columns, view)
             views.append((order, view))
 
     # Unpack views while restoring original order
