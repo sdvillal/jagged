@@ -22,7 +22,7 @@ script:
 
 after_success:
  - codecov
- - ocular --data-file ".coverage" --config-file ".coveragerc"
+ - ocular --data-file ".coverage"
 
 notifications:
   email: false
