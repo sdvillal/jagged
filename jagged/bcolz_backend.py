@@ -76,6 +76,7 @@ class JaggedByCarray(JaggedRawStoreWithContiguity):
         else:
             address[:] = self._bcolz[base:base+size, columns]
             # FIXME: naive implementation, inefficient for contiguity=None
+            #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
 
     def _open_read(self):
         # Open bcolz for reading
@@ -107,7 +108,7 @@ class JaggedByCarray(JaggedRawStoreWithContiguity):
         return self._bcolz.dtype
 
 #
-# Can bcolz be apt for random row retrieval?
+# Can bcolz be apt for random row retrieval and range queries?
 # Because of our query types and usage patterns, probably yes...
 #
 # Naive random access to BCOLZ in disk sucks a little on random read,
