@@ -15,7 +15,7 @@ setup(
     name='jagged',
     license='BSD 3 clause',
     description='Simple tricks for efficient loading or merging collections of unevenly sized elements',
-    long_description=open('README.rst').read().replace('|Build Status| |Coverage Status|', ''),
+    long_description=open('README.rst').read().replace('|Build Status| |Coverage Status| |Scrutinizer Status|', ''),
     version=jagged.__version__,
     url='https://github.com/sdvillal/jagged',
     author='Santi Villalba',

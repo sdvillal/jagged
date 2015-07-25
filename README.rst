@@ -4,9 +4,7 @@ jagged
 tricks for efficient loading of same-type, uneven-size data
 -----------------------------------------------------------
 
-|Pypi Version| |Pypi Downloads| |Build Status| |Scrutinizer Status| |Coverage Status|
-
-|Coverage History|
+|Pypi Version| |Build Status| |Coverage Status| |Scrutinizer Status|
 
 Light storage of elements with different sizes. Current applications:
  - Serialised rdkit molecules
@@ -24,14 +22,11 @@ Design limitations:
   - Costly updates
   - Hard to change schema
 
+.. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
+   :target: http://badge.fury.io/py/jagged
 .. |Build Status| image:: https://travis-ci.org/sdvillal/jagged.svg?branch=master
    :target: https://travis-ci.org/sdvillal/jagged
 .. |Coverage Status| image:: http://codecov.io/github/sdvillal/jagged/coverage.svg?branch=master
    :target: http://codecov.io/github/sdvillal/jagged?branch=master
-.. |Coverage History| image:: http://codecov.io/github/sdvillal/jagged/branch.svg?branch=master
 .. |Scrutinizer Status| image:: https://scrutinizer-ci.com/g/sdvillal/jagged/badges/quality-score.png?b=master
    :target: https://scrutinizer-ci.com/g/sdvillal/jagged/?branch=master
-.. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
-   :target: http://badge.fury.io/py/jagged
-.. |Pypi Downloads| image:: https://pypip.in/d/$REPO/badge.png
-   :target: https://crate.io/packages/$REPO/
