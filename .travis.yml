@@ -14,7 +14,7 @@ before_install:
  - conda info -a
  - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy scikit-learn future bcolz h5py pandas
  - source activate test
- - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov
+ - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
  - travis_retry pip install git+git://github.com/sdvillal/whatami.git@master
 
 script:
@@ -22,6 +22,7 @@ script:
 
 after_success:
   codecov
+  ocular --data-file ".coverage" --config-file ".coveragerc"
 
 notifications:
   email: false

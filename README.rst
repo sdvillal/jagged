@@ -35,4 +35,3 @@ Design limitations:
    :target: http://badge.fury.io/py/jagged
 .. |Pypi Downloads| image:: https://pypip.in/d/$REPO/badge.png
    :target: https://crate.io/packages/$REPO/
-   :alt: Number of PyPI downloads
