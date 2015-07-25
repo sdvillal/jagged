@@ -21,8 +21,8 @@ script:
   py.test -v -rs --doctest-modules --pep8 --cov jagged --cov-report term-missing jagged
 
 after_success:
-  codecov
-  ocular --data-file ".coverage" --config-file ".coveragerc"
+ - codecov
+ - ocular --data-file ".coverage" --config-file ".coveragerc"
 
 notifications:
   email: false
