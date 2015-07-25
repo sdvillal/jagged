@@ -4,12 +4,12 @@ import os
 import os.path as op
 
 
-def home():
+def home():  # pragma: no cover
     """Returns current user home dir."""
     return op.expanduser('~')  # Valid in both py2 and py3
 
 
-def ensure_writable_dir(path):
+def ensure_writable_dir(path):  # pragma: no cover
     """Ensures that a path is a writable directory."""
     def check_path(path):
         if not op.isdir(path):
@@ -29,5 +29,5 @@ def ensure_writable_dir(path):
     return path
 
 
-def ensure_dir(path):
+def ensure_dir(path):  # pragma: no cover
     return ensure_writable_dir(path)
