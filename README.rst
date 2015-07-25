@@ -1,10 +1,12 @@
 jagged
 ======
 
-tricks for efficient loading of homogenously typed, unevenly sized data
------------------------------------------------------------------------
+tricks for efficient loading of same-type, uneven-size data
+-----------------------------------------------------------
 
 |Pypi Version| |Build Status| |Coverage Status|
+
+|Coverage History|
 
 Light storage of elements with different sizes. Current applications:
  - Serialised rdkit molecules
@@ -26,5 +28,6 @@ Design limitations:
    :target: https://travis-ci.org/sdvillal/jagged
 .. |Coverage Status| image:: http://codecov.io/github/sdvillal/jagged/coverage.svg?branch=master
    :target: http://codecov.io/github/sdvillal/jagged?branch=master
+.. |Coverage History| image:: http://codecov.io/github/sdvillal/jagged/branch.svg?branch=master
 .. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
    :target: http://badge.fury.io/py/jagged
