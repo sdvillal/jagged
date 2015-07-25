@@ -14,14 +14,13 @@ before_install:
  - conda info -a
  - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy scikit-learn future bcolz h5py pandas
  - source activate test
- - travis_retry pip install arpeggio pytest-cov pytest-pep8 coveralls codecov
+ - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov
  - travis_retry pip install git+git://github.com/sdvillal/whatami.git@master
 
 script:
   py.test -v -rs --doctest-modules --pep8 --cov jagged --cov-report term-missing jagged
 
 after_success:
-  coveralls
   codecov
 
 notifications:
