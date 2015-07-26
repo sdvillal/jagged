@@ -50,7 +50,7 @@ def contiguity(request):
                         lambda nc: [nc - 1],  # last (we should support python -col syntax)
                         lambda nc: range(0, nc, 2),  # even
                         lambda nc: range(nc)[::-1],  # inverse
-                        lambda nc: range(nc)[::-1] + range(0, nc, 2)  # mixed
+                        lambda nc: list(range(nc)[::-1]) + list(range(0, nc, 2))  # mixed
                         ),
                 ids=('cols=all', 'cols=all-exp', 'cols=first', 'cols=last', 'cols=even', 'cols=inverse', 'cols=mixed'))
 def columns(request):

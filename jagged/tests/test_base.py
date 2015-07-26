@@ -45,7 +45,7 @@ def test_retrieve_contiguous(mock, contiguity, columns):
         assert np.allclose(o, v)
 
     # random order
-    o_s = zip(originals, segments)
+    o_s = list(zip(originals, segments))
     rng.shuffle(o_s)
     originals, segments = zip(*o_s)
     views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
