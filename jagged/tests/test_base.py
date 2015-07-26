@@ -1,8 +1,5 @@
 # coding=utf-8
-from operator import itemgetter
 from jagged.base import retrieve_contiguous
-import pytest
-import numpy as np
 from .fixtures import *
 
 
@@ -34,12 +31,16 @@ def mock(dataset):
     return originals, ne, nc, originals[0].dtype, segments, reader, rng
 
 
-def test_retrieve_contiguous(mock, contiguity):
+def test_retrieve_contiguous(mock, contiguity, columns):
 
     originals, ne, nc, dtype, segments, reader, rng = mock
 
+    columns = columns(nc)
+    if columns is not None:
+        originals = [o[:, tuple(columns)] for o in originals]
+
     # insertion order
-    views = retrieve_contiguous(segments, None, reader, dtype, ne, nc, 'read')
+    views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
     for o, v in zip(originals, views):
         assert np.allclose(o, v)
 
@@ -47,8 +48,7 @@ def test_retrieve_contiguous(mock, contiguity):
     o_s = zip(originals, segments)
     rng.shuffle(o_s)
     originals, segments = zip(*o_s)
-
-    views = retrieve_contiguous(segments, None, reader, dtype, ne, nc, contiguity)
+    views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
     for o, v in zip(originals, views):
         assert np.allclose(o, v)
 
