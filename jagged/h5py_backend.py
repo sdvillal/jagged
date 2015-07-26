@@ -4,10 +4,10 @@ import os.path as op
 import numpy as np
 import h5py
 
-from jagged.base import JaggedRawStoreWithContiguity
+from jagged.base import JaggedRawStore
 
 
-class JaggedByH5Py(JaggedRawStoreWithContiguity):
+class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
                  path=None,
@@ -83,9 +83,6 @@ class JaggedByH5Py(JaggedRawStoreWithContiguity):
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='r')
             self._dset = self._h5[self._dset_name]
-
-    def _get_all(self):
-        return self._dset[:]
 
     def close(self):
         if self._h5 is not None:

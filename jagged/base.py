@@ -48,6 +48,12 @@ class JaggedRawStore(object):
         """
         raise NotImplementedError()
 
+    def _read_segment_to(self, base, size, columns, address):
+        raise NotImplementedError()
+
+    def _open_read(self):
+        raise NotImplementedError()
+
     def get(self, segments=None, columns=None, factory=None, contiguity=None):
         """Returns a list with the data specified in `segments` (and `columns`), possibly transformed by `factory`.
 
@@ -81,7 +87,18 @@ class JaggedRawStore(object):
         -------
         A list with the retrieved elements, possibly transformed by factory.
         """
-        raise NotImplementedError()
+        if self._write:
+            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
+
+        self._open_read()
+
+        if segments is None:
+            # read all
+            segments = [(0, len(self))]
+
+        ne, nc = self.shape
+        views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
+        return views if factory is None else map(factory, views)
 
     def consolidate(self):
         """Perform post-append optimisations, possibly disabling writing."""
@@ -147,34 +164,6 @@ class JaggedRawStore(object):
         return self.shape[0]
 
     # Also consider registry to atexit etc.
-
-
-class JaggedRawStoreWithContiguity(JaggedRawStore):
-
-    def _read_segment_to(self, base, size, columns, address):
-        raise NotImplementedError()
-
-    def _open_read(self):
-        raise NotImplementedError()
-
-    def _get_all(self):
-        raise NotImplementedError()
-
-    def get(self, segments=None, columns=None, factory=None, contiguity='read'):
-
-        if self._write:
-            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
-
-        self._open_read()
-
-        # Just read all...
-        if segments is None:
-            return self._get_all()
-
-        # ...or read the segments
-        ne, nc = self.shape
-        views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
-        return views if factory is None else map(factory, views)
 
 
 def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
@@ -526,4 +515,8 @@ class JaggedStore(object):
 #
 # TODO: make this fault tolerant; it actually kind of is already, but we should write keys incrementally and
 #       coordinate flushes with raw blah...
+#
+# Are we reinventing the wheel?
+#
+# Look at blaze, bioinformatics approaches for intervals and the like.
 #

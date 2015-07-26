@@ -3,12 +3,12 @@ from functools import partial
 
 import bcolz
 
-from jagged.base import JaggedRawStoreWithContiguity
+from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
 from whatami import whatable
 
 
-class JaggedByCarray(JaggedRawStoreWithContiguity):
+class JaggedByCarray(JaggedRawStore):
 
     def __init__(self,
                  path=None,
@@ -82,9 +82,6 @@ class JaggedByCarray(JaggedRawStoreWithContiguity):
         # Open bcolz for reading
         if self._bcolz is None:
             self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
-
-    def _get_all(self):
-        return self._bcolz[:]
 
     def close(self):
         if self._bcolz is not None and self._write:
