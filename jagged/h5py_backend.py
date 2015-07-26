@@ -69,17 +69,17 @@ class JaggedByH5Py(JaggedRawStore):
     def _read_segment_to(self, base, size, columns, address):
         if size > 0:
             if columns is not None:
-                diffs = np.diff(columns)
-                if not np.any(diffs < 1):
+                if not np.any(np.diff(columns) < 1):
                     self._dset.read_direct(address, source_sel=np.s_[base:base+size, columns])
                 else:
                     # h5py only supports increasing order indices
                     #   https://github.com/h5py/h5py/issues/368
                     #   https://github.com/h5py/h5py/issues/368
                     # (boiling down to issues with hdf5 hyperslabs)
-                    # Slow
+                    # better slow than unsupported...
                     columns, inverse = np.unique(columns, return_inverse=True)
-                    address[:] = self._dset[base:base+size, columns][inverse]
+                    address[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
+                    # n.b.: tuple(columns) to force 2d if columns happens to be a one element list
             else:
                 self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
