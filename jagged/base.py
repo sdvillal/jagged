@@ -93,7 +93,6 @@ class JaggedRawStore(object):
         self._open_read()
 
         if segments is None:
-            # read all
             segments = [(0, len(self))]
 
         ne, nc = self.shape
@@ -185,16 +184,15 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
     if contiguity not in ('read', 'write', None):
         raise Exception('Unknown contiguity scheme: %r' % contiguity)
 
-    # Check query sanity and prepare query.
-    # dest_base allows to both:
-    #  - unsort at the end to keep the requested order
-    #  - and tell where each query must go to (in case of contiguity='read')
+    # Check query sanity and prepare contiguous query
+    # dest_base tells where each query must go to in case of contiguity='read'
+    # note that dest_base is not useful for unsorting in the presence of 0-length items (so we explicitly store order)
     dest_base = 0
     query_dest = []
-    for base, size in segments:
+    for order, (base, size) in enumerate(segments):
         if (base + size) > ne or base < 0:
             raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
-        query_dest.append((base, dest_base, size))
+        query_dest.append((order, base, dest_base, size))
         dest_base += size
     total_size = dest_base
 
@@ -206,29 +204,29 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
         # Hope for one-malloc only, but beware of memory leaks
         dest = np.empty((total_size, nc), dtype=dtype)
         # Populate
-        for base, dest_base, size in sorted(query_dest):
+        for order, base, dest_base, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
             reader(base, size, columns, view)
-            views.append((dest_base, view))
+            views.append((order, view))
     elif contiguity == 'write':
         # Hope for one-malloc only, but beware of memory leaks
         dest = np.empty((total_size, nc), dtype=dtype)
         # Populate
         dest_base = 0
-        for base, order, size in sorted(query_dest):
+        for order, base, _, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
             reader(base, size, columns, view)
-            views.append((order, view))
             dest_base += size
+            views.append((order, view))
     else:
-        for base, order, size in sorted(query_dest):
+        for order, base, _, size in sorted(query_dest):
             view = np.empty((size, nc), dtype=dtype)
             reader(base, size, columns, view)
             views.append((order, view))
 
     # Unpack views while restoring original order
     # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
-    return [array for _, array in sorted(views, key=itemgetter(0))]
+    return list(map(itemgetter(1), sorted(views, key=itemgetter(0))))
 
 
 # --- Index stores
