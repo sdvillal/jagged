@@ -47,6 +47,10 @@ class JaggedByCarray(JaggedRawStore):
         if not self._write:
             raise Exception('Cannot write while reading data from repository %s' % self.what().id())
 
+        if any(s < 1 for s in data.shape[1:]):
+            raise Exception('Cannot append data with sizes 0 in non-leading dimension (%s, %r)' %
+                            (self.what().id(), data.shape))
+
         if self._bcolz is None:
             try:  # try opening 'a' mode
                 self._bcolz = \
@@ -68,7 +72,7 @@ class JaggedByCarray(JaggedRawStore):
         else:
             self._bcolz.append(data)
 
-        return len(self._bcolz) - len(data), len(data)
+        return len(self) - len(data), len(data)
 
     def _read_segment_to(self, base, size, columns, address):
         if columns is None:
