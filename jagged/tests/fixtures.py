@@ -56,4 +56,3 @@ def contiguity(request):
 def columns(request):
     return request.param
 # FIXME: probably this could take ncol and not return a function
-
