@@ -442,7 +442,7 @@ class JaggedSimpleIndex(JaggedIndex):
     def segments(self):
         if self._segments is None:
             try:
-                with open(self._segments_file) as reader:
+                with open(self._segments_file, 'rb') as reader:
                     self._segments = pickle.load(reader)
             except:  # FIX Too broad
                 self._segments = []
@@ -451,7 +451,7 @@ class JaggedSimpleIndex(JaggedIndex):
     def keys(self):
         if self._keys is None:
             try:
-                with open(self._keys_file) as reader:
+                with open(self._keys_file, 'rb') as reader:
                     self._keys = pickle.load(reader)
             except:  # FIX Too broad
                 self._keys = {}
