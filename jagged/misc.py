@@ -165,7 +165,7 @@ def bool2segments(ss, size):
     return None
 
 
-def subsegments(segment, *subsegments):
+def subsegments(segment, *subs):
     """Make subsegments relative to the start of a base segment, checking for boundaries.
 
     Parameters
@@ -173,7 +173,7 @@ def subsegments(segment, *subsegments):
     segment : tuple (base, size)
       The segment to which relative subsegments are being specified
 
-    subsegments : list of (base, size) boolean arrays specifying subsegments
+    subs : list of (base, size) boolean arrays specifying subsegments
       These can be either something like (3, 8) (ss_base, ss_size), or boolean lists/arrays
       It is assumed that ss_base is here is offset from `segment` base
 
@@ -226,4 +226,4 @@ def subsegments(segment, *subsegments):
         raise ValueError('%r is not a valid subsegment specification for %r' % (ss, segment))
 
     return [(base + ss_base, ss_size) for ss_base, ss_size in
-            chain.from_iterable(bool_and_valid(ss) for ss in subsegments)]
+            chain.from_iterable(bool_and_valid(ss) for ss in subs)]
