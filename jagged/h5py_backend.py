@@ -92,17 +92,9 @@ class JaggedByH5Py(JaggedRawStore):
                     # better slow than unsupported...
                     columns, inverse = np.unique(columns, return_inverse=True)
                     address[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
-                    # n.b.: tuple(columns) to force 2d if columns happens to be a one element list
+                    # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
             else:
                 self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
     def _backend_attr_hook(self, attr):
         return getattr(self._dset, attr)
-
-    @property
-    def shape(self):
-        return self._backend_attr('shape')
-
-    @property
-    def dtype(self):
-        return self._backend_attr('dtype')

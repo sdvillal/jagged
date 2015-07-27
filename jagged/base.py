@@ -325,7 +325,6 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
             views.append((order, view))
 
     # Unpack views while restoring original order
-    # N.B. we must only use the first element of the tuple, this is correct because python sort is stable
     return list(map(itemgetter(1), sorted(views, key=itemgetter(0))))
 
 
