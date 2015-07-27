@@ -33,6 +33,15 @@ except ImportError:
 class JaggedRawStore(object):
     """Persistent storage of objects of the same type but different length."""
 
+    def __init__(self, path):
+        super(JaggedRawStore, self).__init__()
+        self._path = path
+
+    def _path_or_fail(self):
+        if self._path is None:
+            raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
+        return self._path
+
     # --- Lifecycle
 
     # N.B. at the moment, to make things simple, we only want write or read

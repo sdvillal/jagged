@@ -11,18 +11,18 @@ class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
                  path=None,
+                 # hdf params
                  dset_name='data',
                  chunks=None,
                  compression=None,
                  compression_opts=None,
                  shuffle=False,
                  checkum=False):
-        super(JaggedByH5Py, self).__init__()
+        super(JaggedByH5Py, self).__init__(path)
 
-        self._path = path
         self._dset_name = dset_name
 
-        if path is not None:
+        if self._path is not None:
             self._path = op.join(self._path, 'data.h5')
         self._h5 = None
         self._dset = None
@@ -54,7 +54,7 @@ class JaggedByH5Py(JaggedRawStore):
 
     def _open_write(self, data=None):
         if self._h5 is None:
-            self._h5 = h5py.File(self._path, mode='a')
+            self._h5 = h5py.File(self._path_or_fail(), mode='a')
             if 'data' not in self._h5:
                 # http://docs.h5py.org/en/latest/high/dataset.html
                 self._dset = self._h5.create_dataset(self._dset_name,
@@ -71,7 +71,7 @@ class JaggedByH5Py(JaggedRawStore):
 
     def _open_read(self):
         if self._h5 is None:
-            self._h5 = h5py.File(self._path, mode='r')
+            self._h5 = h5py.File(self._path_or_fail(), mode='r')
             self._dset = self._h5[self._dset_name]
 
     def close(self):

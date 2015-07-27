@@ -97,6 +97,8 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
     test_read(originals, segments)
 
 
+# --- Test self-identification
+
 def test_whatid():
     # TODO: add this to the yield fixtures, with expectations...
     #       check pytest docs as it might be a preferred way of doing this
@@ -107,10 +109,24 @@ def test_whatid():
                              expectedlen=None).what().id()
 
 
+# --- Test factories
+
 def test_factory(jagged_raw):
     jagged_raw, path = jagged_raw
     assert jagged_raw().what().id() == jagged_raw.factory()().what().id(), \
         'factory without parameters should give the same config as the constructor'
 
+# --- Misc tests
 
-# we should really use hypothesis
+
+def test_no_inmemory_storage(jagged_raw):
+    # maybe one day we allow these...
+    jagged_raw, path = jagged_raw
+    with jagged_raw(path=None) as jr:
+        with pytest.raises(Exception) as excinfo:
+            jr.append(np.zeros((1, 1)))
+        assert 'In-memory only arrays are not implemented' in str(excinfo.value)
+
+
+
+# We should really have a look at using hypothesis

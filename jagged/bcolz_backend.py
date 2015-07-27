@@ -15,19 +15,12 @@ class JaggedByCarray(JaggedRawStore):
                  chunklen=1024**2,
                  cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
 
-        super(JaggedByCarray, self).__init__()
-
-        self._path = path
+        super(JaggedByCarray, self).__init__(path)
 
         self.expectedlen = expectedlen
         self.chunklen = chunklen
         self.cparams = whatable(cparams, add_properties=True)
         self._bcolz = None
-
-    def _path_or_fail(self):
-        if self._path is None:
-            raise Exception('In-memory ony arrays are not implemented yet')
-        return self._path
 
     def _append_hook(self, data):
         self._bcolz.append(data)
