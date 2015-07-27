@@ -36,7 +36,7 @@ class JaggedByCarray(JaggedRawStore):
         if self._bcolz is None:
             try:  # try opening 'a' mode
                 self._bcolz = \
-                    bcolz.carray(data[0:0],
+                    bcolz.carray(None,
                                  rootdir=ensure_dir(self._path_or_fail()),
                                  mode='a',
                                  # bcolz conf in case mode='a' semantics change to create, otherwise innocuous
@@ -52,6 +52,16 @@ class JaggedByCarray(JaggedRawStore):
                                  expectedlen=self.expectedlen,
                                  cparams=self.cparams)
 
+    def _open_read(self):
+        # Open bcolz for reading
+        if self._bcolz is None:
+            self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
+
+    def close(self):
+        if self.is_writing:
+            self._bcolz.flush()
+        self._bcolz = None
+
     def _read_segment_to(self, base, size, columns, address):
         if columns is None:
             self._bcolz._getrange(base, size, address)
@@ -59,16 +69,6 @@ class JaggedByCarray(JaggedRawStore):
             address[:] = self._bcolz[base:base+size, columns]
             # FIXME: naive implementation, inefficient for contiguity=None
             #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
-
-    def _open_read(self):
-        # Open bcolz for reading
-        if self._bcolz is None:
-            self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
-
-    def close(self):
-        if self._bcolz is not None and self._write:
-            self._bcolz.flush()
-        self._bcolz = None
 
     @property
     def is_writing(self):
@@ -82,17 +82,8 @@ class JaggedByCarray(JaggedRawStore):
     def is_open(self):
         return self._bcolz is not None
 
-    @property
-    def shape(self):
-        if self._bcolz is None:
-            return None
-        return self._bcolz.shape
-
-    @property
-    def dtype(self):
-        if self._bcolz is None:
-            return None
-        return self._bcolz.dtype
+    def _backend_attr_hook(self, attr):
+        return getattr(self._bcolz, attr)
 
 #
 # Can bcolz be apt for random row retrieval and range queries?

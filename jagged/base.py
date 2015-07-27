@@ -35,45 +35,23 @@ class JaggedRawStore(object):
 
     # --- Lifecycle
 
-    def open(self, data=None, write=False):
-        """Opens this storage for reading or writing.
-
-        Parameters
-        ----------
-        data : numpy array like, default None
-          data schema to use by the storage, needed if this is the first opening of the repository
-
-        write : boolean, default False
-          whether to open for reading or writing
-
-        Returns
-        -------
-        The opened instance (usually self).
-        """
-
-        # N.B. at the moment, to make things simple, we only want write or read
-        # We should ensure concurrency does not break this rule (only one writer xor many readers)
-        # Of course we could use stuff like SWMR from hdf5 or role our own, more featureful and compled concurrency
-        # Not a priority
-
-        if write:
-            if self.is_reading:
-                raise Exception('Cannot write while reading data from repository %s' % self.what.id())
-            if not self.is_open:
-                self._open_write(data)
-        else:
-            if self.is_writing:
-                raise Exception('Cannot read while writing data to repository %s' % self.what.id())
-            if not self.is_open:
-                self._open_read()
-        return self
+    # N.B. at the moment, to make things simple, we only want write or read
+    # We should ensure concurrency does not break this rule (only one writer xor many readers)
+    # Of course we could use stuff like SWMR from hdf5 or role our own, more featureful and compled concurrency
+    # Not a priority
 
     def _open_read(self):
         """Opens in reading mode, returns None."""
         raise NotImplementedError()
 
     def _open_write(self, data=None):
-        """Opens in writing mode, returns None, if data is provided it must be stored."""
+        """Opens in writing mode, returns None.
+
+        Parameters
+        ----------
+        data : numpy array like, default None
+          data schema to use by the storage, needed if this is the first opening of the repository
+        """
         raise NotImplementedError()
 
     @property
@@ -123,8 +101,12 @@ class JaggedRawStore(object):
             raise Exception('Cannot append data with sizes 0 in non-leading dimension (%s, %r)' %
                             (self.what().id(), data.shape))
 
+        # check we can write
+        if self.is_reading:
+            raise Exception('Cannot write while reading data from repository %s' % self.what().id())
+
         # open
-        self.open(data, write=True)
+        self._open_write(data)
 
         # write
         self._append(data)
@@ -181,14 +163,18 @@ class JaggedRawStore(object):
         -------
         A list with the retrieved elements, possibly transformed by factory.
         """
+        # check we can read
         if self.is_writing:
-            raise Exception('Cannot read while writing data from repository %s' % self.what().id())
+            raise Exception('Cannot read while writing data to repository %s' % self.what().id())
 
+        # open
         self._open_read()
 
+        # get one segment with all if segments is None
         if segments is None:
             segments = [(0, len(self))]
 
+        # retrieve data
         ne, nc = self.shape
         views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
@@ -214,20 +200,33 @@ class JaggedRawStore(object):
 
     # --- Shape and dtype
 
-    @property
-    def ndim(self):
-        """Returns the number of dimensions."""
-        return len(self.shape)
+    def _backend_attr_hook(self, attr):
+        raise NotImplementedError()
+
+    def _backend_attr(self, attr):
+        if not self.is_open:
+            with self:
+                try:
+                    self._open_read()
+                    return self._backend_attr_hook(attr)
+                except IOError:
+                    return None
+        return self._backend_attr_hook(attr)
 
     @property
     def shape(self):
         """Returns a tuple with the current size of the storage in each dimension."""
-        raise NotImplementedError()
+        return self._backend_attr('shape')
 
     @property
     def dtype(self):
         """Returns the data type of the store."""
-        raise NotImplementedError()
+        return self._backend_attr('dtype')
+
+    @property
+    def ndim(self):
+        """Returns the number of dimensions."""
+        return len(self.shape)
 
     # --- Context manager and other magics...
 

@@ -96,16 +96,13 @@ class JaggedByH5Py(JaggedRawStore):
             else:
                 self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
+    def _backend_attr_hook(self, attr):
+        return getattr(self._dset, attr)
+
     @property
     def shape(self):
-        if not self.is_open:
-            with self.open(data=None, write=False):
-                return self._dset.shape
-        return self._dset.shape
+        return self._backend_attr('shape')
 
     @property
     def dtype(self):
-        if not self.is_open:
-            with self.open(data=None, write=False):
-                return self._dset.dtype
-        return self._dset.dtype
+        return self._backend_attr('dtype')

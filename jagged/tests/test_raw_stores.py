@@ -17,29 +17,51 @@ def test_0ncol():
     raise NotImplementedError()
 
 
-def test_lifecycle(jagged_raw):
-    jagged_raw, path = jagged_raw
+# -- lifecycle tests
 
-    # cannot append if we open as read-only
-    with jagged_raw(path=path, write=False) as jr:
+def test_no_append_if_reading(jagged_raw):
+    jagged_raw, path = jagged_raw
+    data = np.zeros((2, 10))
+    with jagged_raw(path=path) as jr:
+        jr.append(data)
+        assert jr.shape == data.shape
+        assert jr.dtype == data.dtype
+    with jagged_raw(path=path) as jr:
+        jr.get()  # unusual API, this makes it read-only... think if it is too unconventional
+        # alternative: just open and close as needed in append and get and never fail... to be considered
+        assert jr.shape == data.shape
+        assert jr.dtype == data.dtype
         with pytest.raises(Exception) as excinfo:
             jr.append(np.zeros((2, 10)))
         assert 'Cannot write while reading' in str(excinfo.value)
 
-    # cannot read if we are appending
-    with jagged_raw(path=path, write=True) as jr:
+
+def test_no_read_if_appending(jagged_raw):
+    jagged_raw, path = jagged_raw
+    data = np.zeros((2, 10))
+    with jagged_raw(path=path) as jr:
+        jr.append(data)
+        assert jr.shape == data.shape
+        assert jr.dtype == data.dtype
         with pytest.raises(Exception) as excinfo:
             jr.get()
         assert 'Cannot read while writing' in str(excinfo.value)
 
-    # can close and reopen and keep writing
-    with jagged_raw(path=path, write=True) as jr:
-        jr.append(np.zeros((2, 10)))
-    with jagged_raw(path=path, write=True) as jr:
-        jr.append(np.ones((2, 10)))
-    with jagged_raw(path=path, write=False) as jr:
-        expected = np.vstack((np.zeros((2, 10)), np.ones((2, 10))))
-        assert len(jr) == 4  # we need flush in bcolz, bcolz problem IMHO
+
+def test_keep_writing_after_close(jagged_raw):
+    jagged_raw, path = jagged_raw
+    data0 = np.zeros((2, 10))
+    data1 = np.ones((3, 10))
+    expected = np.vstack((data0, data1))
+    with jagged_raw(path=path) as jr:
+        jr.append(data0)
+        assert jr.shape == data0.shape
+        assert jr.dtype == data0.dtype
+    with jagged_raw(path=path) as jr:
+        jr.append(data1)
+        assert jr.shape == expected.shape
+        assert jr.dtype == expected.dtype
+    with jagged_raw(path=path) as jr:
         assert np.allclose(expected, jr.get()[0])
 
 
@@ -51,18 +73,18 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
 
     # Write
     segments = []
-    with jagged_raw(write=True) as jr:
+    with jagged_raw() as jr:
         total = 0
         assert jr.dtype is None
         assert jr.shape is None
-        assert jr.is_writing
         for original in originals:
             base, size = jr.append(original)
             assert base == total
             assert size == len(original)
+            assert jr.is_writing
+            segments.append((base, size))
             total += size
             assert len(jr) == total
-            segments.append((base, size))
         assert jr.dtype == originals[0].dtype
         assert jr.shape == (sum(map(itemgetter(1), segments)), ncol)
 
@@ -73,13 +95,13 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
             originals = [o[:, columns] for o in originals]
 
         # test read, one by one
-        with jagged_raw(write=False) as jr:
+        with jagged_raw() as jr:
             for original, segment in zip(originals, segments):
                 roundtripped = jr.get([segment], contiguity=contiguity, columns=columns)[0]
                 assert np.allclose(original, roundtripped)
 
         # test read, in a batch
-        with jagged_raw(write=False) as jr:
+        with jagged_raw() as jr:
             for original, roundtripped in zip(originals, jr.get(segments, contiguity=contiguity, columns=columns)):
                 assert np.allclose(original, roundtripped)
 
