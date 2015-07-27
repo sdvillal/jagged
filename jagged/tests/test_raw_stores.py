@@ -213,5 +213,9 @@ def test_chunked_copy_from(jagged_raw):
         jr0.append(np.ones((3, 10)))
         jr1.append_from(jr0, chunksize=2)
         assert np.allclose(jr0.get()[0], jr1.get()[0])
+        with pytest.raises(ValueError) as excinfo:
+            jr1.append_from(jr0, chunksize=-1)
+        assert 'chunksize must be None or bigger than 0, it is -1' in str(excinfo.value)
+
 
 # We should really have a look at using hypothesis

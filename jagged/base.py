@@ -130,8 +130,10 @@ class JaggedRawStore(object):
 
     def append_from(self, jagged, chunksize=None):
         """Appends all the contens of `jagged`."""
-        if chunksize <= 0:
+        if chunksize is None:
             self.append(jagged.get()[0])
+        elif chunksize <= 0:
+            raise ValueError('chunksize must be None or bigger than 0, it is %r' % chunksize)
         else:
             for chunk in jagged.iterchunks(chunksize):
                 self.append(chunk)
