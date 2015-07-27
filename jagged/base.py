@@ -380,6 +380,12 @@ class JaggedIndex(object):
         """
         raise NotImplementedError()
 
+    def sorted_keys(self):
+        """Returns a list of tuples (key, index) sorted by index.
+        Usually this will correspond to "insertion order".
+        """
+        return sorted(self.keys().items(), key=itemgetter(1))
+
     def num_keys(self):
         """Returns the number of keys in the index."""
         return len(self.keys())
@@ -512,20 +518,20 @@ class JaggedStore(object):
             base, length = self._jagged.append(data)
             index.add(segment=(base, length), key=key)
         else:
-            raise Exception('Cannot add key %r' % (key,))
+            raise KeyError('Cannot add key %r' % (key,))
 
-    def get(self, keys=None, factory=None, index='main'):
+    def get(self, keys=None, columns=None, factory=None, index='main'):
         index = self.index(index)
         if keys is None:
-            keys = index.keys()
-        return self._jagged.get(index.get(keys), factory=factory)
+            keys = map(itemgetter(0), index.sorted_keys())
+            # N.B. slow, since we already have the indices of the segments we could save us more searchs
+        return self._jagged.get(index.get(keys), columns=columns, factory=factory)
 
-    def iter(self, keys=None, factory=None, index='main'):
+    def iter(self, keys=None, columns=None, factory=None, index='main'):
         index = self.index(index)
         if keys is None:
-            return (self._jagged.get((segment,), factory=factory)[0]
-                    for segment in index.segments())
-        return (self._jagged.get((segment,), factory=factory)[0]
+            keys = map(itemgetter(0), index.sorted_keys())
+        return (self._jagged.get((segment,), columns=columns, factory=factory)[0]
                 for segment in index.get(keys))
         # we should also add a chunksize parameter and allow to retrieve by chunks
         # of course now chunks have a logical meaning (= number of segments)
@@ -536,7 +542,7 @@ class JaggedStore(object):
     def meta(self):
         if self._meta is None:
             try:
-                with open(self._meta_file) as reader:
+                with open(self._meta_file, 'rb') as reader:
                     self._meta = pickle.load(reader)
             except:
                 self._meta = {}
@@ -548,16 +554,16 @@ class JaggedStore(object):
     def get_meta(self, key):
         return self.meta().get(key, None)
 
-    def add_colnames(self, colnames):
+    def set_colnames(self, colnames):
         self.add_meta('colnames', colnames)  # check consistency with dimensionality
 
-    def get_colnames(self):
+    def colnames(self):
         return self.get_meta('colnames')
 
-    def add_units(self, units):
+    def set_units(self, units):
         self.add_meta('units', units)
 
-    def get_units(self):
+    def units(self):
         return self.get_meta('units')
 
     # --- Closing, context manager
@@ -569,7 +575,7 @@ class JaggedStore(object):
             index.close()
         self._indices = {}
         if self._meta is not None:
-            with open(self._meta_file, 'w') as writer:
+            with open(self._meta_file, 'wb') as writer:
                 pickle.dump(self._meta, writer, protocol=pickle.HIGHEST_PROTOCOL)
 
     def __enter__(self):
@@ -578,6 +584,21 @@ class JaggedStore(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def __len__(self):
+        """Returns the size of the leading dimension."""
+        return self.shape[0]
+
+    @property
+    def shape(self):
+        return self._jagged.shape
+
+    @property
+    def ndim(self):
+        return self._jagged.ndim
+
+    @property
+    def dtype(self):
+        return self._jagged.dtype
 
 #
 # TODO: concurrency on reading
