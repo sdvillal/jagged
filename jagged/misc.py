@@ -1,6 +1,8 @@
 # coding=utf-8
 """A jumble of seemingly useful stuff."""
 from __future__ import unicode_literals
+from itertools import chain
+import numbers
 import os
 import os.path as op
 import numpy as np
@@ -139,3 +141,84 @@ def find_intervals(x):
     starts = starts_ends[0::2]
     ends = starts_ends[1::2]
     return list(zip(starts, ends))
+
+
+def subsegments(segment, *subsegments):
+    """Make subsegments relative to the start of a base segment, checking for boundaries.
+
+    Parameters
+    ----------
+    segment : tuple (base, size)
+      The segment to which relative subsegments are being specified
+
+    subsegments : list of (base, size) boolean arrays specifying subsegments
+      These can be either something like (3, 8) (ss_base, ss_size), or boolean lists/arrays
+      It is assumed that ss_base is here is offset from `segment` base
+
+    Returns
+    -------
+    A list of subsegments [(base, size)], each lying within the boundaries of `segment`.
+
+    Examples
+    --------
+    >>> subsegments((5, 100))
+    []
+    >>> subsegments((5, 100), (11, 14))
+    [(16, 14)]
+    >>> subsegments((5, 100), (11, 14), (3, 88))
+    [(16, 14), (8, 88)]
+    >>> subsegments((0, 5), [True, True, False, True, True])
+    [(0, 2), (3, 2)]
+    >>> subsegments((0, 5), [False] * 5)
+    []
+    >>> subsegments((0, 5), [True] * 5)
+    [(0, 5)]
+    >>> subsegments((0, 5), np.array([True] * 5))
+    [(0, 5)]
+    >>> subsegments((0, 5), [True, True, False, True, True], (2, 2))
+    [(0, 2), (3, 2), (2, 2)]
+    >>> subsegments((0, 100), (90, 11))  # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: (90, 11) is not a valid subsegment specification for (0, 100)
+    >>> subsegments((0, 100), (-3, 8))  # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: (90, 11) is not a valid subsegment specification for (0, 100)
+    >>> subsegments((0, 100), ('a', 8))  # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: ('a', 8) is not a valid subsegment specification for (0, 100)
+    >>> subsegments((0, 100), 'crazyyou')  # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: 'crazyyou' is not a valid subsegment specification for (0, 100)
+    """
+
+    # This implementation is slow, but seemingly correct; I do not think it will bottleneck
+
+    base, size = segment
+
+    def bool2segments(ss):
+        ssa = np.array(ss)
+        if ssa.dtype.kind == 'b' and ssa.ndim == 1 and len(ssa) == size:
+            return [(start, end - start) for start, end in find_intervals(ssa)]
+        return None
+
+    def is_valid_segment(ss):
+        if not isinstance(ss, (tuple, list)):
+            return False
+        if not len(ss) == 2:
+            return False
+        ss_base, ss_size = ss
+        if not isinstance(ss_base, numbers.Integral) and isinstance(ss_size, numbers.Integral):
+            return False
+        if ss_base < 0 or (base + ss_base + ss_size) > (base + size):
+            return False
+        return True
+
+    def bool_and_valid(ss):
+        if is_valid_segment(ss):
+            return [ss]
+        ss_from_bool = bool2segments(ss)
+        if ss_from_bool is not None and all(map(is_valid_segment, ss_from_bool)):
+            return ss_from_bool
+        raise ValueError('%r is not a valid subsegment specification for %r' % (ss, segment))
+
+    return [(base + ss_base, ss_size) for ss_base, ss_size in chain(*[bool_and_valid(ss) for ss in subsegments])]
