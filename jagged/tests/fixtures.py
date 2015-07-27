@@ -38,6 +38,34 @@ def dataset(ncol, rng):
     return rng, originals, ncol
 
 
+@pytest.fixture
+def mock_jagged_raw(dataset):
+
+    # unbox the fixture
+    rng, originals, ncol = dataset
+
+    # reader
+    jagged = np.vstack(originals)
+
+    def reader(base, size, columns, dest):
+        if columns is None:
+            dest[:] = jagged[base:(base+size)]
+        else:
+            dest[:] = jagged[base:(base+size), tuple(columns)]
+
+    # shape
+    ne, nc = jagged.shape
+
+    # segments
+    base = 0
+    segments = []
+    for o in originals:
+        segments.append((base, len(o)))
+        base += len(o)
+
+    return originals, ne, nc, originals[0].dtype, segments, reader, rng
+
+
 @pytest.fixture(params=('read', 'write', None),
                 ids=('cont=read', 'cont=write', 'cont=none'))
 def contiguity(request):

@@ -280,7 +280,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
     # Check for valid contiguity
     if contiguity not in ('read', 'write', None):
-        raise Exception('Unknown contiguity scheme: %r' % contiguity)
+        raise ValueError('Unknown contiguity scheme: %r' % contiguity)
 
     # Check query sanity and prepare contiguous query
     # dest_base tells where each query must go to in case of contiguity='read'

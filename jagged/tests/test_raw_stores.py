@@ -6,6 +6,7 @@ from operator import itemgetter
 import os.path as op
 import bcolz
 from .fixtures import *
+from jagged.base import retrieve_contiguous
 from jagged.misc import ensure_dir
 
 
@@ -57,6 +58,35 @@ def test_interleaved_appending_and_reading(jagged_raw):
         assert jr.ndim == expected.ndim
         # and the data will be properlly appended
         assert np.allclose(expected, jr.get()[0])
+
+
+# -- Tests retrieve contiguous
+
+def test_retrieve_contiguous(mock_jagged_raw, contiguity, columns):
+
+    originals, ne, nc, dtype, segments, reader, rng = mock_jagged_raw
+
+    columns = columns(nc)
+    if columns is not None:
+        originals = [o[:, tuple(columns)] for o in originals]
+
+    # sanity checks for unknown parameter values
+    with pytest.raises(ValueError) as excinfo:
+        retrieve_contiguous(segments, columns, reader, dtype, ne, nc, 'wrong')
+    assert 'Unknown contiguity scheme:' in str(excinfo.value)
+
+    # insertion order
+    views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
+    for o, v in zip(originals, views):
+        assert np.allclose(o, v)
+
+    # random order
+    o_s = list(zip(originals, segments))
+    rng.shuffle(o_s)
+    originals, segments = zip(*o_s)
+    views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
+    for o, v in zip(originals, views):
+        assert np.allclose(o, v)
 
 
 # -- roundtrip tests
