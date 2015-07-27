@@ -18,9 +18,11 @@ from __future__ import absolute_import, unicode_literals, print_function
 from functools import partial
 import os.path as op
 from operator import itemgetter
+
 from toolz import merge
-from jagged.misc import ensure_dir
 import numpy as np
+
+from jagged.misc import ensure_dir, subsegments, is_valid_segment
 from whatami import whatable
 
 try:  # pragma: no cover
@@ -342,9 +344,31 @@ class JaggedIndex(object):
         """
         raise NotImplementedError()
 
-    def segment(self, i):
-        """Returns the ith segment in the index."""
-        return self.segments()[i]
+    def segment(self, key_over_index):
+        """Returns the segment in the index addressed by key_over_index.
+
+        Parameters
+        ----------
+        key_over_index : hashable
+          A key in the key -> index dictionary or an index itself to a a segment.
+          N.B. if a key_over_index can address both the dictionary of keys and the list of segments
+          (that is, an int key has been inserted in the dictionary), then the dictionary address take
+          precedence and the respective segment is returned.
+
+        Returns
+        -------
+        The segment (base, size)
+
+        Raises
+        ------
+        TypeError: if `key_over_index` is not a hashable object or if it cannot index a list
+        IndexError: if `key_over_index` is an integer not in the keys dictionary
+          and cannot address in the segments list
+        """
+        try:
+            return self.segments()[self.keys()[key_over_index]]
+        except KeyError:
+            return self.segments()[key_over_index]
 
     def num_segments(self):
         """Returns the number of segments in the index."""
@@ -352,7 +376,7 @@ class JaggedIndex(object):
 
     def keys(self):
         """Returns a dictionary mapping keys to segment indices.
-        May be smaller than the number of known keys.
+        May be smaller than the number of known segments.
         """
         raise NotImplementedError()
 
@@ -361,17 +385,20 @@ class JaggedIndex(object):
         return len(self.keys())
 
     def can_add(self, key):
-        """Returns True iff the `key` can be added to the index."""
-        # This default implementation disallow repeated keys
+        """Returns True iff the `key` can be added to the index.
+        In the default implementation repeated keys are not allowed.
+        """
         return key not in self.keys()
 
     def add(self, segment, key=None):
         """Adds a segment to the index, possibly linking it to a key."""
         # This default implementation assumes the index is all in memory using python lists and dicts
-        # Maybe we should move one step ahead and use pandas-like indices
+        # We should move one step ahead and use pandas-like indices (and in general be also pandas-friendly)
+        if not is_valid_segment(segment):
+            raise ValueError('%r is not a valid segment specification' % (segment,))
         if key is not None:
             if not self.can_add(key):
-                raise Exception('Cannot insert key %r' % key)
+                raise KeyError('Cannot insert key %r' % key)
             self.segments().append(segment)
             self.keys()[key] = self.num_segments() - 1
         else:
@@ -385,15 +412,9 @@ class JaggedIndex(object):
         """Flushes buffers to permanent storage and closes the underlying backend, if this is necessary."""
         raise NotImplementedError()
 
-    def subsegment(self, segment_id, segment_spec):
-        # a tuple (TODO a bool array...)
-        start, size = segment_spec
-        base_start, base_size = self.segment(segment_id)
-        if start < 0:
-            raise Exception()
-        if base_size < (start + size):
-            raise Exception()
-        return base_start + start, size
+    def subsegments(self, segment_key, *subs):
+        """Returns a list of subsegments relative to the segment pointed to by `segment_key` and `subs` specs."""
+        return subsegments(self.segment(segment_key), *subs)
 
     def __enter__(self):
         return self
