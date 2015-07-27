@@ -18,9 +18,12 @@ from __future__ import absolute_import, unicode_literals, print_function
 from functools import partial
 import os.path as op
 from operator import itemgetter
+from toolz import merge
 from jagged.misc import ensure_dir
 import numpy as np
 from whatami import whatable
+import whatami
+
 try:  # pragma: no cover
     import cPickle as pickle
 except ImportError:  # pragma: no cover
@@ -198,14 +201,21 @@ class JaggedRawStore(object):
 
     # --- Factories / curries / partials
 
-    @classmethod
-    def factory(cls, **kwargs):
-        """Returns a factory for a concrete configuration of this store.
-        The factory is a method that should accept (also both Nones):
-          - path: the address for the data of the store (usually a directory)
-          - write: a boolean indicating if we are opening the store in read or write mode
+    def copyconf(self, **params):
+        """Returns a partial function that instantiates this type of store
+        with changed default parameters.
+
+        N.B. this default implementation is based on being able to retrieve all default parameters
+        using the `what` method; override if that is not the case.
+
+        Parameters
+        ----------
+        params: **dict
+          The parameters that will be fixed in the returned factory function.
         """
-        return partial(cls, **kwargs)
+        return whatable(partial(self.__class__,
+                                **merge(self.what().configdict, params)),
+                        add_properties=False)
 
     # --- Shape and dtype
 

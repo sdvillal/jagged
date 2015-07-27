@@ -17,7 +17,7 @@ class JaggedByH5Py(JaggedRawStore):
                  compression=None,
                  compression_opts=None,
                  shuffle=False,
-                 checkum=False):
+                 checksum=False):
         super(JaggedByH5Py, self).__init__(path)
 
         self._dset_name = dset_name
@@ -29,9 +29,9 @@ class JaggedByH5Py(JaggedRawStore):
 
         self.chunks = chunks
         self.compression = compression
-        self.copts = compression_opts
+        self.compression_opts = compression_opts
         self.shuffle = shuffle
-        self.fletcher32 = checkum
+        self.checksum = checksum
 
     def _append_hook(self, data):
         base = len(self)
@@ -63,9 +63,9 @@ class JaggedByH5Py(JaggedRawStore):
                                                      maxshape=(None, data.shape[1]),
                                                      chunks=self.chunks,
                                                      compression=self.compression,
-                                                     compression_opts=self.copts,
+                                                     compression_opts=self.compression_opts,
                                                      shuffle=self.shuffle,
-                                                     fletcher32=self.fletcher32)
+                                                     fletcher32=self.checksum)
             else:
                 self._dset = self._h5[self._dset_name]
 

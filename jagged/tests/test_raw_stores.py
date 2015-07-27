@@ -111,9 +111,9 @@ def test_whatid():
 
 # --- Test factories
 
-def test_factory(jagged_raw):
+def test_copyconf(jagged_raw):
     jagged_raw, path = jagged_raw
-    assert jagged_raw().what().id() == jagged_raw.factory()().what().id(), \
+    assert jagged_raw().what().id() == jagged_raw().copyconf()().what().id(), \
         'factory without parameters should give the same config as the constructor'
 
 
@@ -135,5 +135,8 @@ def test_no_inmemory_storage(jagged_raw):
             jr.append(np.zeros((1, 1)))
         assert 'In-memory only arrays are not implemented' in str(excinfo.value)
 
+
+def test_copy_from(jagged_raw):
+    pass
 
 # We should really have a look at using hypothesis
