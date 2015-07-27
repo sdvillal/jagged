@@ -70,10 +70,18 @@ def test_retrieve_contiguous(mock_jagged_raw, contiguity, columns):
     if columns is not None:
         originals = [o[:, tuple(columns)] for o in originals]
 
-    # sanity checks for unknown parameter values
+    # sanity checks for wrong inputs
     with pytest.raises(ValueError) as excinfo:
         retrieve_contiguous(segments, columns, reader, dtype, ne, nc, 'wrong')
     assert 'Unknown contiguity scheme:' in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        retrieve_contiguous([(-1, 1)], columns, reader, dtype, ne, nc, contiguity)
+    assert 'Out of bounds query (base=-1, size=1' in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        retrieve_contiguous([(0, 100000)], columns, reader, dtype, ne, nc, contiguity)
+    assert 'Out of bounds query (base=0, size=100000' in str(excinfo.value)
 
     # insertion order
     views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)

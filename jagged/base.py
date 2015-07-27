@@ -289,7 +289,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
     query_dest = []
     for order, (base, size) in enumerate(segments):
         if (base + size) > ne or base < 0:
-            raise Exception('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
+            raise ValueError('Out of bounds query (base=%d, size=%d, maxsize=%d)' % (base, size, ne))
         query_dest.append((order, base, dest_base, size))
         dest_base += size
     total_size = dest_base
