@@ -271,7 +271,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
     #
     # Retrieving segments by increasing base does not need to be the optimal strategy, but it usually will
-    # For example bcolz caches 1 whole chunk in memory at the moment (apart from some block caching)
+    # For example bcolz caches 1 whole chunk in memory at the moment (apart from possibly some block caching)
     # (as a side note, therefore be carefull with chunksizes)
     #
     # An obvious tweak that could improve performance under certain access patterns
@@ -472,38 +472,8 @@ class JaggedSimpleIndex(JaggedIndex):
 @whatable
 class JaggedStore(object):
 
-    #
-    # Only one JaggedRawStore is allowed to be used.
-    # This restriction is in place to free me from thinking
-    # about consistency of data accross backends, and may be
-    # removed in the future.
-    #
-    # Allow for multiple views on the segments; for example:
-    #  - original trajectories
-    #  - saccades
-    #  - when the animal is behaving / collaborating / engaging
-    #  - perturbations
-    #  - where a filter flags a bad trajectory
-    # This can be done by:
-    #   - switching indices (e.g. an index for saccades, an index for perturbs...)
-    #   - single-index, taking care that the keys in the index indicate well the type os
-    #     (and allowing partial key matching, pandas amazing indices can be helpful here)
-    # We must think of a mechanism to share indices accross different raw-jagged instances
-    # Let's do when all this have been properly used in production
-    #
-    # How to share indices?
-    #  - Instantiate a new JaggedStore, same root, different jagged_name.
-    #  - Copy the jagged stuff without caring about keys
-    #
-    # Index <-> Jagged is actually a many-to-many relationship
-    # What about .register(index, jagged) to make this explicit?
-    #
-    # TODO: the usual weakref to tame memory consumption
-    #
-
     def __init__(self,
                  path,
-                 jagged_name='main',
                  jagged_factory=None,
                  index_factory=None):
 
@@ -514,18 +484,16 @@ class JaggedStore(object):
         # Raw storage
         if jagged_factory is None:
             from .bcolz_backend import JaggedByCarray
-            jagged_factory = JaggedByCarray.factory()
-        self._jagged_name = jagged_name
+            jagged_factory = JaggedByCarray
         self._jagged_factory = jagged_factory
         self._jagged_root = ensure_dir(op.join(self._path,
                                                'raw',
-                                               jagged_name,
                                                jagged_factory().what().id()))
-        self._jagged = None
+        self._jagged = jagged_factory(path=self._jagged_root)
 
         # Meta-information
         self._meta = None
-        self._meta_file = op.join(ensure_dir(op.join(self._path, 'meta', jagged_name)), 'meta.pkl')
+        self._meta_file = op.join(ensure_dir(op.join(self._path, 'meta')), 'meta.pkl')
 
         # Indices
         if index_factory is None:
@@ -533,24 +501,15 @@ class JaggedStore(object):
         self._index_factory = index_factory
         self._indices = {}
 
-    def jagged(self, write=False):
-        if self._jagged is None:
-            self._jagged = self._jagged_factory(self._jagged_root, write=write)
-        elif self._jagged.is_writing != write:
-            self._jagged.close()
-            self._jagged = self._jagged_factory(self._jagged_root, write=write)
-        return self._jagged
-
     def index(self, name='main'):
         if name not in self._indices:
-            self._indices['name'] = self._index_factory(path=ensure_dir(op.join(self._path, 'indices', name)))
+            self._indices[name] = self._index_factory(path=ensure_dir(op.join(self._path, 'indices', name)))
         return self._indices[name]
 
     def add(self, data, key=None):
         index = self.index()
         if index.can_add(key):
-            jagged = self.jagged(write=True)
-            base, length = jagged.append(data)
+            base, length = self._jagged.append(data)
             index.add(segment=(base, length), key=key)
         else:
             raise Exception('Cannot add key %r' % (key,))
@@ -559,15 +518,18 @@ class JaggedStore(object):
         index = self.index(index)
         if keys is None:
             keys = index.keys()
-        return self.jagged().get(index.get(keys), factory=factory)
+        return self._jagged.get(index.get(keys), factory=factory)
 
     def iter(self, keys=None, factory=None, index='main'):
         index = self.index(index)
         if keys is None:
-            return (self.jagged().get((segment,), factory=factory)[0]
+            return (self._jagged.get((segment,), factory=factory)[0]
                     for segment in index.segments())
-        return (self.jagged().get((segment,), factory=factory)[0]
+        return (self._jagged.get((segment,), factory=factory)[0]
                 for segment in index.get(keys))
+        # we should also add a chunksize parameter and allow to retrieve by chunks
+        # of course now chunks have a logical meaning (= number of segments)
+        # so imagining memory consumption would now be a bit more indirect task
 
     # --- Meta information
 
@@ -618,7 +580,8 @@ class JaggedStore(object):
 
 
 #
-# TODO: put a lock and make clear this is not useful in multithreading
+# TODO: concurrency on reading
+# Put a lock and make clear write is not possible in multithreading
 # File-based locking for catching multiprocessing races and other problems...
 #   http://tilde.town/~cristo/file-locking-in-python.html
 # import portalocker
@@ -643,4 +606,35 @@ class JaggedStore(object):
 # Are we reinventing the wheel?
 #
 # Look at blaze, bioinformatics approaches for intervals and the like.
+#
+# ---- About JaggedStore
+#
+# Only one JaggedRawStore is allowed to be used.
+# This restriction is in place to free me from thinking
+# about consistency of data accross backends, and may be
+# removed in the future.
+#
+# Allow for multiple views on the segments; for example:
+#  - original trajectories
+#  - saccades
+#  - when the animal is behaving / collaborating / engaging
+#  - perturbations
+#  - where a filter flags a bad trajectory
+# This can be done by:
+#   - switching indices (e.g. an index for saccades, an index for perturbs...)
+#   - single-index, taking care that the keys in the index indicate well the type os
+#     (and allowing partial key matching, pandas amazing indices can be helpful here)
+# We must think of a mechanism to share indices accross different raw-jagged instances
+# Let's do when all this have been properly used in production
+#
+# How to share indices?
+#  - Instantiate a new JaggedStore, same root, different jagged_name.
+#  - Copy the jagged stuff without caring about keys
+#
+# Index <-> Jagged is actually a many-to-many relationship
+# What about .register(index, jagged) to make this explicit?
+#
+# TODO: the usual weakref to tame memory consumption
+#
+# TODO: versioning mechanism (simply define versions for everything and store them somewhere)
 #

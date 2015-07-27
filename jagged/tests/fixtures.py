@@ -3,7 +3,7 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import numpy as np
 import pytest
-from jagged.base import JaggedSimpleIndex
+from jagged.base import JaggedSimpleIndex, JaggedStore
 
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
@@ -27,6 +27,17 @@ def index(request, tmpdir):
     dest = tmpdir.join(idx().what().id()).ensure_dir()
     try:
         yield idx, str(dest)
+    finally:
+        dest.remove(ignore_errors=True)
+
+
+@pytest.yield_fixture(params=(JaggedStore,),
+                      ids=('store=simple',))
+def store(request, tmpdir):
+    store = request.param
+    dest = tmpdir.join('store').ensure_dir()
+    try:
+        yield store, str(dest)
     finally:
         dest.remove(ignore_errors=True)
 
