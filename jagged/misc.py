@@ -143,6 +143,28 @@ def find_intervals(x):
     return list(zip(starts, ends))
 
 
+def is_valid_segment(ss, relative_to=None):
+    if not isinstance(ss, (tuple, list)):
+        return False
+    if not len(ss) == 2:
+        return False
+    ss_base, ss_size = ss
+    if not isinstance(ss_base, numbers.Integral) and isinstance(ss_size, numbers.Integral):
+        return False
+    if relative_to is not None:
+        base, size = relative_to
+        if ss_base < 0 or (base + ss_base + ss_size) > (base + size):
+            return False
+    return True
+
+
+def bool2segments(ss, size):
+    ssa = np.array(ss)
+    if ssa.dtype.kind == 'b' and ssa.ndim == 1 and len(ssa) == size:
+        return [(start, end - start) for start, end in find_intervals(ssa)]
+    return None
+
+
 def subsegments(segment, *subsegments):
     """Make subsegments relative to the start of a base segment, checking for boundaries.
 
@@ -195,29 +217,11 @@ def subsegments(segment, *subsegments):
 
     base, size = segment
 
-    def bool2segments(ss):
-        ssa = np.array(ss)
-        if ssa.dtype.kind == 'b' and ssa.ndim == 1 and len(ssa) == size:
-            return [(start, end - start) for start, end in find_intervals(ssa)]
-        return None
-
-    def is_valid_segment(ss):
-        if not isinstance(ss, (tuple, list)):
-            return False
-        if not len(ss) == 2:
-            return False
-        ss_base, ss_size = ss
-        if not isinstance(ss_base, numbers.Integral) and isinstance(ss_size, numbers.Integral):
-            return False
-        if ss_base < 0 or (base + ss_base + ss_size) > (base + size):
-            return False
-        return True
-
     def bool_and_valid(ss):
-        if is_valid_segment(ss):
+        if is_valid_segment(ss, relative_to=segment):
             return [ss]
-        ss_from_bool = bool2segments(ss)
-        if ss_from_bool is not None and all(map(is_valid_segment, ss_from_bool)):
+        ss_from_bool = bool2segments(ss, size)
+        if ss_from_bool is not None and all(is_valid_segment(ss, relative_to=segment) for ss in ss_from_bool):
             return ss_from_bool
         raise ValueError('%r is not a valid subsegment specification for %r' % (ss, segment))
 
