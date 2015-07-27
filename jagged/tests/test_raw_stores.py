@@ -155,16 +155,18 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
 # --- Test self-identification
 
 def test_whatid():
-    # TODO: add this to the yield fixtures, with expectations...
-    #       check pytest docs as it might be a preferred way of doing this
-    assert "JaggedByCarray" \
-           "(chunklen=1000,cparams=cparams(clevel=3,cname='zlib',shuffle=False),expectedlen=None)" \
+    assert "JaggedByCarray(chunklen=1000,cparams=cparams(clevel=3,cname='zlib',shuffle=False),expectedlen=None)" \
            == JaggedByCarray(chunklen=1000,
                              cparams=bcolz.cparams(clevel=3, cname='zlib', shuffle=False),
                              expectedlen=None).what().id()
+    assert "JaggedByH5Py(checksum=False,chunks=(1000,10),compression='lzf',compression_opts=0,shuffle=True)" \
+           == JaggedByH5Py(chunks=(1000, 10),
+                           compression='lzf',
+                           compression_opts=0,
+                           shuffle=True).what().id()
 
 
-# --- Test factories
+# --- Test factories / curries/ partials
 
 def test_copyconf(jagged_raw):
     jagged_raw, path = jagged_raw
