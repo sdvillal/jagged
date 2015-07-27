@@ -51,7 +51,3 @@ def test_retrieve_contiguous(mock, contiguity, columns):
     views = retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity)
     for o, v in zip(originals, views):
         assert np.allclose(o, v)
-
-
-if __name__ == '__main__':
-    pytest.main()
