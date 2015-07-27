@@ -12,7 +12,7 @@ before_install:
  - conda config --set always_yes yes
  - conda update conda
  - conda info -a
- - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas
+ - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas toolz
  - source activate test
  - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
  - travis_retry pip install git+git://github.com/sdvillal/whatami.git@master
