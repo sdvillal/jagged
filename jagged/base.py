@@ -164,7 +164,7 @@ class JaggedRawStore(object):
         A list with the retrieved elements, possibly transformed by factory.
         """
         # check we can read
-        if self.is_writing and not self.is_writing:
+        if self.is_writing and not self.is_reading:
             self.close()
 
         # open
