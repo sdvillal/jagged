@@ -15,6 +15,7 @@ All these classes are `whatable`.
    Retrieve only by contiguous blocks (i.e. no explicit support for slice notation)
 """
 from __future__ import absolute_import, unicode_literals, print_function
+from functools import partial
 import os.path as op
 from operator import itemgetter
 from jagged.misc import ensure_dir
@@ -32,6 +33,76 @@ except ImportError:
 class JaggedRawStore(object):
     """Persistent storage of objects of the same type but different length."""
 
+    # --- Lifecycle
+
+    def open(self, data=None, write=False):
+        """Opens this storage for reading or writing.
+
+        Parameters
+        ----------
+        data : numpy array like, default None
+          data schema to use by the storage, needed if this is the first opening of the repository
+
+        write : boolean, default False
+          whether to open for reading or writing
+
+        Returns
+        -------
+        The opened instance (usually self).
+        """
+
+        # N.B. at the moment, to make things simple, we only want write or read
+        # We should ensure concurrency does not break this rule (only one writer xor many readers)
+        # Of course we could use stuff like SWMR from hdf5 or role our own, more featureful and compled concurrency
+        # Not a priority
+
+        if write:
+            if self.is_reading:
+                raise Exception('Cannot write while reading data from repository %s' % self.what.id())
+            if not self.is_open:
+                self._open_write(data)
+        else:
+            if self.is_writing:
+                raise Exception('Cannot read while writing data to repository %s' % self.what.id())
+            if not self.is_open:
+                self._open_read()
+        return self
+
+    def _open_read(self):
+        """Opens in reading mode, returns None."""
+        raise NotImplementedError()
+
+    def _open_write(self, data=None):
+        """Opens in writing mode, returns None, if data is provided it must be stored."""
+        raise NotImplementedError()
+
+    @property
+    def is_writing(self):
+        """Returns whether we can append more data using this jagged instance."""
+        raise NotImplementedError()
+
+    @property
+    def is_reading(self):
+        """Returns whether we can append more data using this jagged instance."""
+        raise NotImplementedError()
+
+    @property
+    def is_open(self):
+        """Returns whether we are currently open in any mode."""
+        raise NotImplementedError()
+
+    def consolidate(self):
+        """Perform post-append optimisations, possibly disabling writing."""
+        return self
+
+    # Maybe requiring flush is worth, although I like to force using the context manager...
+
+    def close(self):
+        """Flushes buffers to permanent storage and closes the underlying backend."""
+        raise NotImplementedError()
+
+    # --- Writing data
+
     def append(self, data):
         """Appends new data to this storage.
 
@@ -46,12 +117,35 @@ class JaggedRawStore(object):
         -------
         A tuple (base, size) that addresses the appended data in the storage.
         """
+
+        # check data validity
+        if any(s < 1 for s in data.shape[1:]):
+            raise Exception('Cannot append data with sizes 0 in non-leading dimension (%s, %r)' %
+                            (self.what().id(), data.shape))
+
+        # open
+        self.open(data, write=True)
+
+        # write
+        self._append(data)
+
+        # return segment
+        return len(self) - len(data), len(data)
+
+    def _append(self, data):
         raise NotImplementedError()
+
+    def append_from(self, jagged, chunksize=None):
+        """Appends all the contens of `jagged`."""
+        if chunksize <= 0:
+            self.append(jagged.get())
+        else:
+            for chunk in jagged.iterchunks(chunksize):
+                self.append(chunk)
+
+    # --- Reading data
 
     def _read_segment_to(self, base, size, columns, address):
-        raise NotImplementedError()
-
-    def _open_read(self):
         raise NotImplementedError()
 
     def get(self, segments=None, columns=None, factory=None, contiguity=None):
@@ -99,14 +193,6 @@ class JaggedRawStore(object):
         views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
 
-    def consolidate(self):
-        """Perform post-append optimisations, possibly disabling writing."""
-        return self
-
-    def close(self):
-        """Flushes buffers to permanent storage and closes the underlying backend."""
-        raise NotImplementedError()
-
     def iterchunks(self, chunksize):
         """Reads `chunksize` elements at a time until all is read."""
         base = 0
@@ -115,27 +201,18 @@ class JaggedRawStore(object):
             size = min(chunksize, total - base)
             yield self.get([(base, size)])[0]
 
-    def append_from(self, jagged, chunksize=None):
-        """Appends all the contens of `jagged`."""
-        if chunksize <= 0:
-            self.append(jagged.get())
-        else:
-            for chunk in jagged.iterchunks(chunksize):
-                self.append(chunk)
+    # --- Factories / curries / partials
 
-    @staticmethod
-    def factory(**kwargs):
+    @classmethod
+    def factory(cls, **kwargs):
         """Returns a factory for a concrete configuration of this store.
         The factory is a method that should accept (also both Nones):
           - path: the address for the data of the store (usually a directory)
           - write: a boolean indicating if we are opening the store in read or write mode
         """
-        raise NotImplementedError()
+        return partial(cls, **kwargs)
 
-    @property
-    def is_writing(self):
-        """Returns whether we can append more data using this jagged instance."""
-        raise NotImplementedError()
+    # --- Shape and dtype
 
     @property
     def ndim(self):
@@ -152,6 +229,8 @@ class JaggedRawStore(object):
         """Returns the data type of the store."""
         raise NotImplementedError()
 
+    # --- Context manager and other magics...
+
     def __enter__(self):
         return self
 
@@ -162,7 +241,7 @@ class JaggedRawStore(object):
         """Returns the size of the leading dimension."""
         return self.shape[0]
 
-    # Also consider registry to atexit etc.
+    # Also consider register to atexit
 
 
 def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):

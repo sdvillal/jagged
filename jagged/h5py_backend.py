@@ -12,7 +12,6 @@ class JaggedByH5Py(JaggedRawStore):
     def __init__(self,
                  path=None,
                  dset_name='data',
-                 write=False,
                  chunks=None,
                  compression=None,
                  compression_opts=None,
@@ -20,7 +19,6 @@ class JaggedByH5Py(JaggedRawStore):
                  checkum=False):
         super(JaggedByH5Py, self).__init__()
 
-        self._write = write
         self._path = path
         self._dset_name = dset_name
 
@@ -35,11 +33,26 @@ class JaggedByH5Py(JaggedRawStore):
         self.shuffle = shuffle
         self.fletcher32 = checkum
 
-    def append(self, data):
+    def _append(self, data):
+        base = len(self)
+        size = len(data)
+        self._dset.resize(base + size, axis=0)
+        self._dset[base:(base+size)] = data
+        return base, size
 
-        if not self._write:
-            raise Exception('Cannot write while reading data from repository %s' % self.what().id())
+    @property
+    def is_writing(self):
+        return self.is_open and self._h5.mode != 'r'
 
+    @property
+    def is_reading(self):
+        return self.is_open and self._h5.mode == 'r'
+
+    @property
+    def is_open(self):
+        return self._h5 is not None
+
+    def _open_write(self, data=None):
         if self._h5 is None:
             self._h5 = h5py.File(self._path, mode='a')
             if 'data' not in self._h5:
@@ -56,15 +69,15 @@ class JaggedByH5Py(JaggedRawStore):
             else:
                 self._dset = self._h5[self._dset_name]
 
-        base = self._dset.shape[0]
-        size = len(data)
-        self._dset.resize(base + size, axis=0)
-        self._dset[base:(base+size)] = data
+    def _open_read(self):
+        if self._h5 is None:
+            self._h5 = h5py.File(self._path, mode='r')
+            self._dset = self._h5[self._dset_name]
 
-        return base, size
-
-    def is_writing(self):
-        return self._write
+    def close(self):
+        if self._h5 is not None:
+            self._h5.close()
+            self._h5 = None
 
     def _read_segment_to(self, base, size, columns, address):
         if size > 0:
@@ -83,40 +96,16 @@ class JaggedByH5Py(JaggedRawStore):
             else:
                 self._dset.read_direct(address, source_sel=np.s_[base:base+size])
 
-    def _open_read(self):
-        """Opens the dataset for reading."""
-        # Oversimplified design
-        if self._write:
-            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
-
-        # Open the dataset for reading
-        if self._h5 is None:
-            self._h5 = h5py.File(self._path, mode='r')
-            self._dset = self._h5[self._dset_name]
-
-    def close(self):
-        if self._h5 is not None:
-            self._h5.close()
-            self._h5 = None
-
-    @property
-    def is_writing(self):
-        return self._write
-
     @property
     def shape(self):
-        if self._dset is None:
-            return None
-            # FIXME: the lifecycle is ill defined if calling (shape, dtype...) before reading or writing
+        if not self.is_open:
+            with self.open(data=None, write=False):
+                return self._dset.shape
         return self._dset.shape
 
     @property
     def dtype(self):
-        if self._dset is None:
-            return None
-            # FIXME: the lifecycle is ill defined if calling (shape, dtype...) before reading or writing
+        if not self.is_open:
+            with self.open(data=None, write=False):
+                return self._dset.dtype
         return self._dset.dtype
-
-    @staticmethod
-    def factory(**kwargs):
-        return JaggedByH5Py

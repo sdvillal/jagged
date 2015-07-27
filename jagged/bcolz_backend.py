@@ -1,6 +1,4 @@
 # coding=utf-8
-from functools import partial
-
 import bcolz
 
 from jagged.base import JaggedRawStore
@@ -12,7 +10,6 @@ class JaggedByCarray(JaggedRawStore):
 
     def __init__(self,
                  path=None,
-                 write=False,
                  # bcolz params
                  expectedlen=None,
                  chunklen=1024**2,
@@ -21,40 +18,25 @@ class JaggedByCarray(JaggedRawStore):
         super(JaggedByCarray, self).__init__()
 
         self._path = path
-        self._write = write
 
         self.expectedlen = expectedlen
         self.chunklen = chunklen
         self.cparams = whatable(cparams, add_properties=True)
         self._bcolz = None
 
-    @staticmethod
-    def factory(expectedlen=None,
-                chunklen=1024**2,
-                cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
-        return partial(JaggedByCarray,
-                       expectedlen=expectedlen,
-                       chunklen=chunklen,
-                       cparams=cparams)
-
     def _path_or_fail(self):
         if self._path is None:
             raise Exception('In-memory ony arrays are not implemented yet')
         return self._path
 
-    def append(self, data):
+    def _append(self, data):
+        self._bcolz.append(data)
 
-        if not self._write:
-            raise Exception('Cannot write while reading data from repository %s' % self.what().id())
-
-        if any(s < 1 for s in data.shape[1:]):
-            raise Exception('Cannot append data with sizes 0 in non-leading dimension (%s, %r)' %
-                            (self.what().id(), data.shape))
-
+    def _open_write(self, data=None):
         if self._bcolz is None:
             try:  # try opening 'a' mode
                 self._bcolz = \
-                    bcolz.carray(data,
+                    bcolz.carray(data[0:0],
                                  rootdir=ensure_dir(self._path_or_fail()),
                                  mode='a',
                                  # bcolz conf in case mode='a' semantics change to create, otherwise innocuous
@@ -63,16 +45,12 @@ class JaggedByCarray(JaggedRawStore):
                                  cparams=self.cparams)
             except:  # try opening 'w' mode
                 self._bcolz = \
-                    bcolz.carray(data,
+                    bcolz.carray(data[0:0],
                                  rootdir=ensure_dir(self._path_or_fail()),
                                  mode='w',
                                  chunklen=self.chunklen,
                                  expectedlen=self.expectedlen,
                                  cparams=self.cparams)
-        else:
-            self._bcolz.append(data)
-
-        return len(self) - len(data), len(data)
 
     def _read_segment_to(self, base, size, columns, address):
         if columns is None:
@@ -94,7 +72,15 @@ class JaggedByCarray(JaggedRawStore):
 
     @property
     def is_writing(self):
-        return self._write
+        return self.is_open and self._bcolz.mode in ('w', 'a')
+
+    @property
+    def is_reading(self):
+        return self.is_open and self._bcolz.mode == 'r'
+
+    @property
+    def is_open(self):
+        return self._bcolz is not None
 
     @property
     def shape(self):
