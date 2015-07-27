@@ -33,7 +33,7 @@ class JaggedByH5Py(JaggedRawStore):
         self.shuffle = shuffle
         self.fletcher32 = checkum
 
-    def _append(self, data):
+    def _append_hook(self, data):
         base = len(self)
         size = len(data)
         self._dset.resize(base + size, axis=0)
@@ -79,7 +79,7 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5.close()
             self._h5 = None
 
-    def _read_segment_to(self, base, size, columns, address):
+    def _get_hook(self, base, size, columns, address):
         if size > 0:
             if columns is not None:
                 if not np.any(np.diff(columns) < 1):

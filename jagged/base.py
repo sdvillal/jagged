@@ -102,19 +102,19 @@ class JaggedRawStore(object):
                             (self.what().id(), data.shape))
 
         # check we can write
-        if self.is_reading:
-            raise Exception('Cannot write while reading data from repository %s' % self.what().id())
+        if self.is_reading and not self.is_writing:
+            self.close()
 
         # open
         self._open_write(data)
 
         # write
-        self._append(data)
+        self._append_hook(data)
 
         # return segment
         return len(self) - len(data), len(data)
 
-    def _append(self, data):
+    def _append_hook(self, data):
         raise NotImplementedError()
 
     def append_from(self, jagged, chunksize=None):
@@ -127,7 +127,7 @@ class JaggedRawStore(object):
 
     # --- Reading data
 
-    def _read_segment_to(self, base, size, columns, address):
+    def _get_hook(self, base, size, columns, address):
         raise NotImplementedError()
 
     def get(self, segments=None, columns=None, factory=None, contiguity=None):
@@ -164,8 +164,8 @@ class JaggedRawStore(object):
         A list with the retrieved elements, possibly transformed by factory.
         """
         # check we can read
-        if self.is_writing:
-            raise Exception('Cannot read while writing data to repository %s' % self.what().id())
+        if self.is_writing and not self.is_writing:
+            self.close()
 
         # open
         self._open_read()
@@ -176,7 +176,7 @@ class JaggedRawStore(object):
 
         # retrieve data
         ne, nc = self.shape
-        views = retrieve_contiguous(segments, columns, self._read_segment_to, self.dtype, ne, nc, contiguity)
+        views = retrieve_contiguous(segments, columns, self._get_hook, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
 
     def iterchunks(self, chunksize):
@@ -226,7 +226,8 @@ class JaggedRawStore(object):
     @property
     def ndim(self):
         """Returns the number of dimensions."""
-        return len(self.shape)
+        shape = self.shape
+        return len(self.shape) if shape is not None else None
 
     # --- Context manager and other magics...
 

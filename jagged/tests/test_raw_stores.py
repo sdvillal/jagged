@@ -19,51 +19,28 @@ def test_0ncol():
 
 # -- lifecycle tests
 
-def test_no_append_if_reading(jagged_raw):
-    jagged_raw, path = jagged_raw
-    data = np.zeros((2, 10))
-    with jagged_raw(path=path) as jr:
-        jr.append(data)
-        assert jr.shape == data.shape
-        assert jr.dtype == data.dtype
-    with jagged_raw(path=path) as jr:
-        jr.get()  # unusual API, this makes it read-only... think if it is too unconventional
-        # alternative: just open and close as needed in append and get and never fail... to be considered
-        assert jr.shape == data.shape
-        assert jr.dtype == data.dtype
-        with pytest.raises(Exception) as excinfo:
-            jr.append(np.zeros((2, 10)))
-        assert 'Cannot write while reading' in str(excinfo.value)
-
-
-def test_no_read_if_appending(jagged_raw):
-    jagged_raw, path = jagged_raw
-    data = np.zeros((2, 10))
-    with jagged_raw(path=path) as jr:
-        jr.append(data)
-        assert jr.shape == data.shape
-        assert jr.dtype == data.dtype
-        with pytest.raises(Exception) as excinfo:
-            jr.get()
-        assert 'Cannot read while writing' in str(excinfo.value)
-
-
-def test_keep_writing_after_close(jagged_raw):
+def test_interleaved_appending_and_reading(jagged_raw):
     jagged_raw, path = jagged_raw
     data0 = np.zeros((2, 10))
     data1 = np.ones((3, 10))
     expected = np.vstack((data0, data1))
     with jagged_raw(path=path) as jr:
+        assert jr.shape is None
+        assert jr.ndim is None
+        assert jr.dtype is None
         jr.append(data0)
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
-    with jagged_raw(path=path) as jr:
+        assert np.allclose(data0, jr.get()[0])
+        assert jr.shape == data0.shape
+        assert jr.dtype == data0.dtype
         jr.append(data1)
         assert jr.shape == expected.shape
         assert jr.dtype == expected.dtype
-    with jagged_raw(path=path) as jr:
         assert np.allclose(expected, jr.get()[0])
 
+
+# -- roundtrip tests
 
 def test_roundtrip(jagged_raw, dataset, columns, contiguity):
     jagged_raw, path = jagged_raw

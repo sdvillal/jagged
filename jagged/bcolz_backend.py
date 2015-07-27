@@ -29,7 +29,7 @@ class JaggedByCarray(JaggedRawStore):
             raise Exception('In-memory ony arrays are not implemented yet')
         return self._path
 
-    def _append(self, data):
+    def _append_hook(self, data):
         self._bcolz.append(data)
 
     def _open_write(self, data=None):
@@ -62,7 +62,7 @@ class JaggedByCarray(JaggedRawStore):
             self._bcolz.flush()
         self._bcolz = None
 
-    def _read_segment_to(self, base, size, columns, address):
+    def _get_hook(self, base, size, columns, address):
         if columns is None:
             self._bcolz._getrange(base, size, address)
         else:
