@@ -3,18 +3,30 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import numpy as np
 import pytest
+from jagged.base import JaggedSimpleIndex
 
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
 
 
-@pytest.yield_fixture(params=[JaggedByCarray, JaggedByH5Py],
-                      ids=['jr=carray', 'jr=h5py'])
+@pytest.yield_fixture(params=(JaggedByCarray, JaggedByH5Py),
+                      ids=('jr=carray', 'jr=h5py'))
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
     try:
         yield jr, str(dest)
+    finally:
+        dest.remove(ignore_errors=True)
+
+
+@pytest.yield_fixture(params=(JaggedSimpleIndex,),
+                      ids=('idx=simple',))
+def index(request, tmpdir):
+    idx = request.param
+    dest = tmpdir.join(idx().what().id()).ensure_dir()
+    try:
+        yield idx, str(dest)
     finally:
         dest.remove(ignore_errors=True)
 

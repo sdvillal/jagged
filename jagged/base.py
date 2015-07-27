@@ -330,7 +330,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
 # --- Index stores
 
-@whatable
+@whatable(add_properties=False)
 class JaggedIndex(object):
     """Maps keys to segments that can address elements in `JaggedRawStore` instances.
     Segments can be addressed by key and insertion index.
@@ -405,12 +405,18 @@ class JaggedIndex(object):
 class JaggedSimpleIndex(JaggedIndex):
     """Simplemost implementation, index in-memory and persistence using pickle"""
 
-    def __init__(self, root):
+    def __init__(self, path=None):
         self._keys = None
         self._segments = None
-        self._root = ensure_dir(op.join(root, self.what().id()))
-        self._keys_file = op.join(self._root, 'keys.pkl')
-        self._segments_file = op.join(self._root, 'segments.pkl')
+        self._path = path
+
+    @property
+    def _keys_file(self):
+        return op.join(ensure_dir(self._path), 'keys.pkl')
+
+    @property
+    def _segments_file(self):
+        return op.join(ensure_dir(self._path), 'segments.pkl')
 
     def segments(self):
         if self._segments is None:
@@ -432,10 +438,10 @@ class JaggedSimpleIndex(JaggedIndex):
 
     def close(self):
         if self._segments is not None:
-            with open(self._segments_file, 'w') as writer:
+            with open(self._segments_file, 'wb') as writer:
                 pickle.dump(self._segments, writer, protocol=pickle.HIGHEST_PROTOCOL)
         if self._keys is not None:
-            with open(self._keys_file, 'w') as writer:
+            with open(self._keys_file, 'wb') as writer:
                 pickle.dump(self._keys, writer, protocol=pickle.HIGHEST_PROTOCOL)
 
 
