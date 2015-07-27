@@ -17,6 +17,32 @@ def test_0ncol():
     raise NotImplementedError()
 
 
+def test_lifecycle(jagged_raw):
+    jagged_raw, path = jagged_raw
+
+    # cannot append if we open as read-only
+    with jagged_raw(path=path, write=False) as jr:
+        with pytest.raises(Exception) as excinfo:
+            jr.append(np.zeros((2, 10)))
+        assert 'Cannot write while reading' in str(excinfo.value)
+
+    # cannot read if we are appending
+    with jagged_raw(path=path, write=True) as jr:
+        with pytest.raises(Exception) as excinfo:
+            jr.get()
+        assert 'Cannot read while writing' in str(excinfo.value)
+
+    # can close and reopen and keep writing
+    with jagged_raw(path=path, write=True) as jr:
+        jr.append(np.zeros((2, 10)))
+    with jagged_raw(path=path, write=True) as jr:
+        jr.append(np.ones((2, 10)))
+    with jagged_raw(path=path, write=False) as jr:
+        expected = np.vstack((np.zeros((2, 10)), np.ones((2, 10))))
+        assert len(jr) == 4  # we need flush in bcolz, bcolz problem IMHO
+        assert np.allclose(expected, jr.get()[0])
+
+
 def test_roundtrip(jagged_raw, dataset, columns, contiguity):
     jagged_raw, path = jagged_raw
     jagged_raw = partial(jagged_raw, path=path)
