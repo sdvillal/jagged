@@ -21,9 +21,9 @@ from operator import itemgetter
 from jagged.misc import ensure_dir
 import numpy as np
 from whatami import whatable
-try:
+try:  # pragma: no cover
     import cPickle as pickle
-except ImportError:
+except ImportError:  # pragma: no cover
     import pickle
 
 
@@ -80,7 +80,7 @@ class JaggedRawStore(object):
 
     def consolidate(self):
         """Perform post-append optimisations, possibly disabling writing."""
-        return self
+        return self  # pragma: no cover
 
     # Maybe requiring flush is worth, although I like to force using the context manager...
 
