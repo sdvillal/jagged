@@ -109,8 +109,8 @@ def test_whatid():
 
 def test_factory(jagged_raw):
     jagged_raw, path = jagged_raw
-    assert (jagged_raw().what().id() == jagged_raw.factory()().what().id(),
-            'factory without parameters should give the same config as the constructor')
+    assert jagged_raw().what().id() == jagged_raw.factory()().what().id(), \
+        'factory without parameters should give the same config as the constructor'
 
 
 # we should really use hypothesis
