@@ -100,6 +100,10 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5 = None
 
     @property
+    def is_writing(self):
+        return self._write
+
+    @property
     def shape(self):
         if self._dset is None:
             return None

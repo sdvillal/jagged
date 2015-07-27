@@ -88,7 +88,7 @@ class JaggedRawStore(object):
         A list with the retrieved elements, possibly transformed by factory.
         """
         if self.is_writing:
-            raise Exception('Cannot read while writing data from repository %s' % self.what.id())
+            raise Exception('Cannot read while writing data from repository %s' % self.what().id())
 
         self._open_read()
 
