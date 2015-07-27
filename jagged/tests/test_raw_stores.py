@@ -10,16 +10,6 @@ from jagged.base import retrieve_contiguous
 from jagged.misc import ensure_dir
 
 
-@pytest.mark.xfail(reason='Needs to be implemented')
-def test_empty_read():
-    raise NotImplementedError()
-
-
-@pytest.mark.xfail(reason='Needs to be implemented')
-def test_0ncol():
-    raise NotImplementedError()
-
-
 # -- lifecycle tests
 
 def test_interleaved_appending_and_reading(jagged_raw):
