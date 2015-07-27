@@ -83,12 +83,12 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
                 assert np.allclose(original, roundtripped)
 
     # read all
-    # with jagged_raw(write=False) as jr:
-    #     assert np.allclose(np.vstack(originals) if columns is None else np.vstack(originals)[:, columns],
-    #                        jr.get(contiguity=contiguity, columns=columns)[0])
+    with jagged_raw() as jr:
+        assert np.allclose(np.vstack(originals) if columns is None else np.vstack(originals)[:, columns],
+                           jr.get(contiguity=contiguity, columns=columns)[0])
 
     # read in insertion order
-    # test_read(originals, segments)
+    test_read(originals, segments)
 
     # read in random order
     or_s = list(zip(originals, segments))
@@ -116,8 +116,8 @@ def test_factory(jagged_raw):
     assert jagged_raw().what().id() == jagged_raw.factory()().what().id(), \
         'factory without parameters should give the same config as the constructor'
 
-# --- Misc tests
 
+# --- Misc tests
 
 def test_no_inmemory_storage(jagged_raw):
     # maybe one day we allow these...
@@ -126,7 +126,6 @@ def test_no_inmemory_storage(jagged_raw):
         with pytest.raises(Exception) as excinfo:
             jr.append(np.zeros((1, 1)))
         assert 'In-memory only arrays are not implemented' in str(excinfo.value)
-
 
 
 # We should really have a look at using hypothesis
