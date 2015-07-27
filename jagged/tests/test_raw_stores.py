@@ -119,6 +119,14 @@ def test_factory(jagged_raw):
 
 # --- Misc tests
 
+def test_nonvalid_appends(jagged_raw):
+    jagged_raw, path = jagged_raw
+    with jagged_raw(path=path) as jr:
+        with pytest.raises(Exception) as excinfo:
+            jr.append(np.zeros((10, 0)))
+        assert 'Cannot append data with sizes 0 in non-leading dimension' in str(excinfo.value)
+
+
 def test_no_inmemory_storage(jagged_raw):
     # maybe one day we allow these...
     jagged_raw, path = jagged_raw
