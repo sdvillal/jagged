@@ -221,4 +221,5 @@ def subsegments(segment, *subsegments):
             return ss_from_bool
         raise ValueError('%r is not a valid subsegment specification for %r' % (ss, segment))
 
-    return [(base + ss_base, ss_size) for ss_base, ss_size in chain(*[bool_and_valid(ss) for ss in subsegments])]
+    return [(base + ss_base, ss_size) for ss_base, ss_size in
+            chain.from_iterable(bool_and_valid(ss) for ss in subsegments)]
