@@ -66,7 +66,6 @@ def test_retrieve_contiguous(mock_jagged_raw, contiguity, columns):
 
     originals, ne, nc, dtype, segments, reader, rng = mock_jagged_raw
 
-    columns = columns(nc)
     if columns is not None:
         originals = [o[:, tuple(columns)] for o in originals]
 
@@ -103,7 +102,6 @@ def test_roundtrip(jagged_raw, dataset, columns, contiguity):
     jagged_raw, path = jagged_raw
     jagged_raw = partial(jagged_raw, path=path)
     rng, originals, ncol = dataset
-    columns = columns(ncol)
 
     # Write
     segments = []
