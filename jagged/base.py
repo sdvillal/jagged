@@ -22,7 +22,6 @@ from toolz import merge
 from jagged.misc import ensure_dir
 import numpy as np
 from whatami import whatable
-import whatami
 
 try:  # pragma: no cover
     import cPickle as pickle
@@ -132,7 +131,7 @@ class JaggedRawStore(object):
     def append_from(self, jagged, chunksize=None):
         """Appends all the contens of `jagged`."""
         if chunksize <= 0:
-            self.append(jagged.get())
+            self.append(jagged.get()[0])
         else:
             for chunk in jagged.iterchunks(chunksize):
                 self.append(chunk)
@@ -198,6 +197,7 @@ class JaggedRawStore(object):
         while base < total:
             size = min(chunksize, total - base)
             yield self.get([(base, size)])[0]
+            base += size
 
     # --- Factories / curries / partials
 

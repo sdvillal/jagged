@@ -3,8 +3,10 @@
 from __future__ import print_function, absolute_import, unicode_literals
 from functools import partial
 from operator import itemgetter
+import os.path as op
 import bcolz
 from .fixtures import *
+from jagged.misc import ensure_dir
 
 
 @pytest.mark.xfail(reason='Needs to be implemented')
@@ -137,6 +139,24 @@ def test_no_inmemory_storage(jagged_raw):
 
 
 def test_copy_from(jagged_raw):
-    pass
+    jagged_raw, path = jagged_raw
+    path0 = ensure_dir(op.join(path, 'test0'))
+    path1 = ensure_dir(op.join(path, 'test1'))
+    with jagged_raw(path0) as jr0, jagged_raw(path1) as jr1:
+        jr0.append(np.zeros((2, 10)))
+        jr0.append(np.ones((3, 10)))
+        jr1.append_from(jr0)
+        assert np.allclose(jr0.get()[0], jr1.get()[0])
+
+
+def test_chunked_copy_from(jagged_raw):
+    jagged_raw, path = jagged_raw
+    path0 = ensure_dir(op.join(path, 'test0'))
+    path1 = ensure_dir(op.join(path, 'test1'))
+    with jagged_raw(path0) as jr0, jagged_raw(path1) as jr1:
+        jr0.append(np.zeros((2, 10)))
+        jr0.append(np.ones((3, 10)))
+        jr1.append_from(jr0, chunksize=2)
+        assert np.allclose(jr0.get()[0], jr1.get()[0])
 
 # We should really have a look at using hypothesis
