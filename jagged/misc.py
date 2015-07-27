@@ -70,6 +70,9 @@ def crossings(x, threshold=0, after=False):
     [0 1 3]
     >>> print(crossings(np.array([0, 3, -3, -3]), threshold=-2.5))
     [1]
+    >>> print(crossings(np.array([[0, 3], [-3, -3]]), threshold=-2.5))  # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    Exception: Only 1D arrays, please (you gave me 2 dimensions)
     """
     if len(x.shape) > 1:
         raise Exception('Only 1D arrays, please (you gave me %d dimensions)' % len(x.shape))
@@ -135,4 +138,4 @@ def find_intervals(x):
 
     starts = starts_ends[0::2]
     ends = starts_ends[1::2]
-    return zip(starts, ends)
+    return list(zip(starts, ends))
