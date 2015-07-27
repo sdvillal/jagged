@@ -27,18 +27,35 @@ def test_interleaved_appending_and_reading(jagged_raw):
     data1 = np.ones((3, 10))
     expected = np.vstack((data0, data1))
     with jagged_raw(path=path) as jr:
+        # before writing, everything is unknown
         assert jr.shape is None
         assert jr.ndim is None
         assert jr.dtype is None
+        # first write-up
         jr.append(data0)
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
+        assert jr.ndim == data0.ndim
+        # first read
         assert np.allclose(data0, jr.get()[0])
+        # even if we close it...
+        jr.close()
+        # we can now know shapes and the like
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
+        assert jr.ndim == data0.ndim
+        # we can reread...
+        assert np.allclose(data0, jr.get()[0])
+        # we can know shapes and the like
+        assert jr.shape == data0.shape
+        assert jr.dtype == data0.dtype
+        assert jr.ndim == data0.ndim
+        # we can append more
         jr.append(data1)
         assert jr.shape == expected.shape
         assert jr.dtype == expected.dtype
+        assert jr.ndim == expected.ndim
+        # and the data will be properlly appended
         assert np.allclose(expected, jr.get()[0])
 
 
