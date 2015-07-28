@@ -77,6 +77,9 @@ class JaggedByCarray(JaggedRawStore):
         # Open bcolz for reading
         if self._bcolz is None:
             self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
+            # TODO: check that cparams are correct, if not, just transmute (make this store have the correct parameters)
+            #       the same for chunksize...
+            #       can be a pain in the ass, so maybe just be picky and fail?
 
     def close(self):
         if self.is_writing:
