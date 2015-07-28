@@ -6,7 +6,6 @@ import h5py
 
 from jagged.base import JaggedRawStore
 
-
 class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
@@ -101,3 +100,11 @@ class JaggedByH5Py(JaggedRawStore):
 
     def _backend_attr_hook(self, attr):
         return getattr(self._dset, attr)
+
+
+# From h5py docs:
+# Chunking has performance implications.
+# It’s recommended to keep the total size of your chunks between 10 KiB and 1 MiB,
+# larger for larger datasets. Also keep in mind that when any element in a chunk is accessed,
+# the entire chunk is read from disk.
+#
