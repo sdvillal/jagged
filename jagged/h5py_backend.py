@@ -13,7 +13,7 @@ class JaggedByH5Py(JaggedRawStore):
                  path=None,
                  # hdf params
                  dset_name='data',
-                 chunks=None,
+                 chunklen=None,
                  compression=None,
                  compression_opts=None,
                  shuffle=False,
@@ -27,7 +27,7 @@ class JaggedByH5Py(JaggedRawStore):
         self._h5 = None
         self._dset = None
 
-        self.chunks = chunks
+        self.chunklen = chunklen
         self.compression = compression
         self.compression_opts = compression_opts
         self.shuffle = shuffle
@@ -57,11 +57,14 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5 = h5py.File(self._path_or_fail(), mode='a')
             if 'data' not in self._h5:
                 # http://docs.h5py.org/en/latest/high/dataset.html
+                chunks = None
+                if self.chunklen is not None:
+                    chunks = (self.chunklen,) + (data.shape[1:] if data.ndim > 1 else ())
                 self._dset = self._h5.create_dataset(self._dset_name,
                                                      dtype=data.dtype,
                                                      shape=(0, data.shape[1]),
                                                      maxshape=(None, data.shape[1]),
-                                                     chunks=self.chunks,
+                                                     chunks=chunks,
                                                      compression=self.compression,
                                                      compression_opts=self.compression_opts,
                                                      shuffle=self.shuffle,
