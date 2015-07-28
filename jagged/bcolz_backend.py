@@ -7,12 +7,40 @@ from whatami import whatable
 
 
 class JaggedByCarray(JaggedRawStore):
+    """
+    A Jagged store that uses in-disk `bcolz.carray` to store the data.
+
+    This backend should be good for compressable data accessed sequentially or in batch range queries.
+    Random access of small segments will suffer from a considerable performance degradation.
+
+    Usually these stores are backed by many files, so access via network file systems or from spin disks can
+    potentially be inefficient.
+
+    Parameters
+    ----------
+    path : string
+      the carray will/must reside here
+
+    expectedlen : int, default None
+      passed to the carray on creation, the expected number of rows in the store
+      carray will use it to guess a good chunksize
+      the actual size of each chunk will of course depend also on the number of columns
+      must be None if `chunklen` is provided
+
+    chunklen : int, default None
+      passed to the carray on creation, the number of rows to store per chunk
+      the actual size of each chunk will of course depend also on the number of columns
+      must be None if `expectedlen` is provided
+
+    cparams : `bcolz.cparams`, default bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')
+      the compression configuration for bcolz; only used if the array is empty
+    """
 
     def __init__(self,
                  path=None,
                  # bcolz params
                  expectedlen=None,
-                 chunklen=1024**2,
+                 chunklen=1024 ** 2,
                  cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
 
         super(JaggedByCarray, self).__init__(path)
