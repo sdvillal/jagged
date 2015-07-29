@@ -12,7 +12,7 @@ from jagged.misc import ensure_dir
 
 # -- lifecycle tests
 
-def test_interleaved_appending_and_reading(jagged_raw):
+def test_lifecycle(jagged_raw):
     jagged_raw, path = jagged_raw
     data0 = np.zeros((2, 10))
     data1 = np.ones((3, 10))
