@@ -91,8 +91,10 @@ class JaggedByCarray(JaggedRawStore):
             self._bcolz._getrange(base, size, address)
         else:
             address[:] = self._bcolz[base:base+size, columns]
-            # FIXME: naive implementation, inefficient for contiguity=None
+            # FIXME: naive inefficient implementation (double alloc and copy)
             #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
+            #        also look at chunk __getitem__ and _getitem, possibly others
+            #        it would be great if that is bundled with bcolz, so we do not depend on cython...
 
     @property
     def is_writing(self):
@@ -130,3 +132,4 @@ class JaggedByCarray(JaggedRawStore):
 # Probably contiguity for further reads is better; just for example check speeds of access (way faster)
 #
 # TODO: ask for carray._getrange to be public API
+#
