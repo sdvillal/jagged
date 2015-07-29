@@ -149,8 +149,8 @@ def test_whatid():
            == JaggedByCarray(chunklen=1000,
                              cparams=bcolz.cparams(clevel=3, cname='zlib', shuffle=False),
                              expectedlen=None).what().id()
-    assert "JaggedByH5Py(checksum=False,chunks=(1000,10),compression='lzf',compression_opts=0,shuffle=True)" \
-           == JaggedByH5Py(chunks=(1000, 10),
+    assert "JaggedByH5Py(checksum=False,chunklen=1000,compression='lzf',compression_opts=0,shuffle=True)" \
+           == JaggedByH5Py(chunklen=1000,
                            compression='lzf',
                            compression_opts=0,
                            shuffle=True).what().id()
