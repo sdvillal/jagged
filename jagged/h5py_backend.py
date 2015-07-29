@@ -6,6 +6,7 @@ import h5py
 
 from jagged.base import JaggedRawStore
 
+
 class JaggedByH5Py(JaggedRawStore):
 
     def __init__(self,
