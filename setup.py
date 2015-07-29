@@ -36,7 +36,7 @@ setup(
         'Operating System :: Unix',
     ],
     install_requires=['numpy',
-                      'whatami',
+                      'whatami>=3.0.0',
                       'toolz',
                       # DELETE THESE
                       'pandas',

@@ -14,8 +14,7 @@ before_install:
  - conda info -a
  - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas toolz
  - source activate test
- - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
- - travis_retry pip install git+git://github.com/sdvillal/whatami.git@master
+ - travis_retry pip install arpeggio whatami pytest-cov pytest-pep8 codecov scrutinizer-ocular
 
 script:
   py.test -v -rs --doctest-modules --pep8 --cov jagged --cov-report term-missing jagged
