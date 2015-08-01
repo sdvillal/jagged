@@ -269,19 +269,6 @@ class JaggedRawStore(object):
 
 def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
-    #
-    # Retrieving segments by increasing base does not need to be the optimal strategy, but it usually will
-    # For example bcolz caches 1 whole chunk in memory at the moment (apart from possibly some block caching)
-    # (as a side note, therefore be carefull with chunksizes)
-    #
-    # An obvious tweak that could improve performance under certain access patterns
-    # could be to detect overlaps and retrieve accordingly only once, returning appropriate views.
-    # It would be also dangerous (imagine side effects occurring with changing one of the overlapping views)
-    # Not worth the effort or the pain it would cause.
-    #
-    # Lame reinventing the DB wheel
-    #
-
     # Check for valid contiguity
     if contiguity not in ('read', 'write', None):
         raise ValueError('Unknown contiguity scheme: %r' % contiguity)
@@ -436,6 +423,11 @@ class JaggedSimpleIndex(JaggedIndex):
         self._keys = None
         self._segments = None
         self._path = path
+        # populate indices
+        # N.B. at the moment things are brittle and we can loose index data under certain conditions
+        # FIXME asap
+        self.segments()
+        self.keys()
 
     @property
     def _keys_file(self):
