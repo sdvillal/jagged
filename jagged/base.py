@@ -288,6 +288,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
     nc = len(columns) if columns is not None else nc
 
     # Retrieve
+    print('Retrieving...')
     views = []
     if contiguity == 'read':
         # Hope for one-malloc only, but beware of memory leaks
