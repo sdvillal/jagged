@@ -270,7 +270,7 @@ class JaggedRawStore(object):
 def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
     # Check for valid contiguity
-    if contiguity not in ('read', 'write', None):
+    if contiguity not in ('read', 'write', 'auto', None):
         raise ValueError('Unknown contiguity scheme: %r' % contiguity)
 
     # Check query sanity and prepare contiguous query
@@ -296,7 +296,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
         # Populate
         for order, base, dest_base, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
-            reader(base, size, columns, view)
+            view = reader(base, size, columns, view)
             views.append((order, view))
     elif contiguity == 'write':
         # Hope for one-malloc only, but beware of memory leaks
@@ -305,13 +305,17 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
         dest_base = 0
         for order, base, _, size in sorted(query_dest):
             view = dest[dest_base:dest_base+size]
-            reader(base, size, columns, view)
+            view = reader(base, size, columns, view)
             dest_base += size
+            views.append((order, view))
+    elif contiguity == 'auto':
+        for order, base, _, size in sorted(query_dest):
+            view = reader(base, size, columns, None)
             views.append((order, view))
     else:
         for order, base, _, size in sorted(query_dest):
             view = np.empty((size, nc), dtype=dtype)
-            reader(base, size, columns, view)
+            view = reader(base, size, columns, view)
             views.append((order, view))
 
     # Unpack views while restoring original order
