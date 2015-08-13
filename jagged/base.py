@@ -165,15 +165,19 @@ class JaggedRawStore(object):
           transforms each of the returned elements into a desired type (for example, a pandas DataFrame)
           another use can be to apply summary statistics
 
-        contiguity : string or None, default 'read'
+        contiguity : string or None, default None
            indicates the type of contiguity sought for the results; for performance segments retrieval
            does not need to followdone in any order
              - 'read': a best effort should be done to leave retrieved segments order-contiguous in memory;
                        this can potentially speed up operations reading these data in the order specified by segments
              - 'write': a best effort should be done to write segments sequentially in memory;
                         this can potentially speed up retrieval
-             - None: do not force any contiguity
-           usually 'read' can be a good idea for analysis
+             - 'auto': allow the backend to decide the return flavor;
+                       using this the backends can return "lazy" or "cached" arrays
+                       (for example, views on memmapped arrays or hdf5 datasets)
+             - None: do not force any contiguity nor allow any strange return, just plain numpy arrays
+                     owning their own data; this is safest and usually well performing
+           usually 'read' can be a good idea for analysis, and 'auto' can have memory saving benefits
            beware that forcing contiguity for speed might lead to memory leaks
            (the whole retrieved segments won't be released while any of them is reacheable)
 
