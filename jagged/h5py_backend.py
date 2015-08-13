@@ -41,25 +41,43 @@ class JaggedByH5Py(JaggedRawStore):
             self._dset = self._h5[self._dset_name]
 
     def _get_hook(self, base, size, columns, dest):
-        if dest is None:
-            view = self._dset[base:base+size] if columns is None else self._dset[base:base+size, tuple(columns)]
-            return view  # should we force read with [:]?
-        elif size > 0:
-            if columns is not None:
-                if not np.any(np.diff(columns) < 1):
-                    self._dset.read_direct(dest, source_sel=np.s_[base:base+size, columns])
-                else:
-                    # h5py only supports increasing order indices
-                    #   https://github.com/h5py/h5py/issues/368
-                    #   https://github.com/h5py/h5py/issues/368
-                    # (boiling down to issues with hdf5 hyperslabs)
-                    # better slow than unsupported...
-                    columns, inverse = np.unique(columns, return_inverse=True)
-                    dest[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
-                    # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
+
+        # h5py does not handle graciously this case
+        if size == 0:
+            if dest is not None:
+                return dest
+            nc = len(columns) if columns is not None else self._dset.shape[-1]
+            return np.empty((0, nc), dtype=self._dset.dtype)
+
+        # easy case, no column subset requested
+        if columns is None:
+            if dest is None:
+                return self._dset[base:base+size]  # should we force read with [:]? add to benchmark
             else:
                 self._dset.read_direct(dest, source_sel=np.s_[base:base+size])
-        return dest
+                return dest
+
+        # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
+        # column-subset is requested
+        # h5py only supports increasing order indices in fancy indexing
+        #   https://github.com/h5py/h5py/issues/368
+        #   https://github.com/h5py/h5py/issues/368
+        # (boiling down to issues with hdf5 hyperslabs)
+
+        if not np.any(np.diff(columns) < 1):
+            if dest is not None:
+                self._dset.read_direct(dest, source_sel=np.s_[base:base+size, tuple(columns)])
+                return dest
+            else:
+                return self._dset[base:base+size, tuple(columns)]
+
+        # better slow than unsupported...
+        columns, inverse = np.unique(columns, return_inverse=True)
+        if dest is not None:
+            dest[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
+            return dest
+        else:
+            return self._dset[base:base+size, tuple(columns)][:, inverse]
 
     # --- Write
 
