@@ -145,7 +145,7 @@ class JaggedRawStore(object):
 
     # --- Reading data
 
-    def _get_hook(self, base, size, columns, address):
+    def _get_hook(self, base, size, columns, dest):
         raise NotImplementedError()
 
     def get(self, segments=None, columns=None, factory=None, contiguity=None):
