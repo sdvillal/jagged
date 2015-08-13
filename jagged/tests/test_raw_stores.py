@@ -214,21 +214,21 @@ def test_mmap_check_sizes(tmpdir):
         jbm.append(x)
         mmf = jbm._mmpath
     # write row-sized junk
-    with open(mmf, 'ab') as writer:
+    with open(mmf, 'a') as writer:
         writer.write('junk' * 10)
     with JaggedByMemMap(dest) as jbm:
         with pytest.raises(Exception) as excinfo:
             jbm.get([(0, 2)])
         assert 'the number or rows inferred by file size does not coincide' in str(excinfo.value)
     # write junk that look like leftovers of an aborted write
-    with open(mmf, 'ab') as writer:
+    with open(mmf, 'a') as writer:
         writer.write('jagged')
     with JaggedByMemMap(dest) as jbm:
         with pytest.raises(Exception) as excinfo:
             jbm.get([(0, 2)])
         assert 'the memmap file has incomplete data' in str(excinfo.value)
     # make the memmap way too small
-    with open(mmf, 'wb') as writer:
+    with open(mmf, 'w') as writer:
         writer.write('jagged')
     with pytest.raises(Exception) as excinfo:
         jbm.get([(0, 2)])

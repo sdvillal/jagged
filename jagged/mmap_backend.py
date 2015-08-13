@@ -2,6 +2,7 @@
 """Backend using python/numpy mmap bindings."""
 from __future__ import absolute_import, unicode_literals, print_function, division
 import os.path as op
+from future.utils import PY3
 import numpy as np
 from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
@@ -62,7 +63,7 @@ class JaggedByMemMap(JaggedRawStore):
     def _append_hook(self, data):
         base = len(self)
         size = len(data)
-        self._mm.write(str(data.data))
+        self._mm.buffer.write(data.data) if PY3 else self._mm.write(str(data.data))
         self._shape = self._shape[0] + size, self._shape[1]
         return base, size
 
