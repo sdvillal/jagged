@@ -6,9 +6,9 @@ import numpy as np
 from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
 
-try:
+try:  # pragma: no cover
     import cPickle as pickle
-except ImportError:
+except ImportError:  # pragma: no cover
     import pickle
 
 
@@ -50,7 +50,7 @@ class JaggedByMemMap(JaggedRawStore):
 
     def _open_write(self, data=None):
         if not op.isfile(self._meta):
-            if data is None:
+            if data is None:  # pragma: no cover
                 raise ValueError('data must not be None when bootstrapping storage')
             self._dtype = data.dtype
             self._order = 'F' if np.isfortran(data) else 'C'
@@ -97,15 +97,16 @@ class JaggedByMemMap(JaggedRawStore):
         return num_rows, leftovers
 
     def _check_sizes(self):
-        if not op.isfile(self._mmpath) or self._shape is None:
-            return
-        num_rows, leftovers = self._len_by_filelen()
-        if 0 != leftovers:
-            raise Exception('the memmap file has incomplete data (%d leftover bytes from a partially written array).'
-                            '(are you missing transactions?)' % leftovers)
-        if num_rows != self.shape[0]:
-            raise Exception('the number or rows inferred by file size does not coincide with the length of the store '
-                            '(%d != %d)' % (num_rows, self.shape[0]))
+        if op.isfile(self._mmpath) and self._shape is not None:
+            num_rows, leftovers = self._len_by_filelen()
+            if 0 != leftovers:
+                raise Exception('the memmap file has incomplete data '
+                                '(%d leftover bytes from a partially written array).'
+                                '(are you missing transactions?)' % leftovers)
+            if num_rows != self.shape[0]:
+                raise Exception('the number or rows inferred by file size '
+                                'does not coincide with the length of the store '
+                                '(%d != %d)' % (num_rows, self.shape[0]))
 
     def _write_meta(self):
         """Writes the information about the array."""
@@ -128,7 +129,7 @@ class JaggedByMemMap(JaggedRawStore):
             return self._dtype
         if attr == 'shape':
             return self._shape
-        raise ValueError('Unknown attribute %s' % attr)
+        raise ValueError('Unknown attribute %s' % attr)  # pragma: no cover
 
 #
 # TODO: growing length can be easily inferred from file size, no need to update _shape
