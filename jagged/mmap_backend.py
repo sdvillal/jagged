@@ -19,9 +19,9 @@ class JaggedByMemMap(JaggedRawStore):
         super(JaggedByMemMap, self).__init__(path)
 
         if self._path is not None:
-            ensure_dir(self._mmpath)
+            ensure_dir(self._path)
             self._meta = op.join(self._path, 'meta.pkl')
-            self._mmpath = op.join(self._mmpath, 'data.mm')
+            self._mmpath = op.join(self._path, 'data.mm')
 
         self._mm = None  # numpy memmap for reading / file handler for writing
         self._dtype = None
@@ -94,6 +94,8 @@ class JaggedByMemMap(JaggedRawStore):
         return num_rows, leftovers
 
     def _check_sizes(self):
+        if not op.isfile(self._mmpath) or self._shape is None:
+            return
         num_rows, leftovers = self._len_by_filelen()
         if 0 != leftovers:
             raise Exception('the memmap file has incomplete data (%d leftover bytes from a partially written array).'
@@ -104,14 +106,13 @@ class JaggedByMemMap(JaggedRawStore):
 
     def _write_meta(self):
         """Writes the information about the array."""
-        with open(self._meta, 'wb') as writer:
-            pickle.dump((self._dtype, self._shape, self._order), writer, protocol=pickle.HIGHEST_PROTOCOL)
+        if self._dtype is not None:
+            with open(self._meta, 'wb') as writer:
+                pickle.dump((self._dtype, self._shape, self._order), writer, protocol=pickle.HIGHEST_PROTOCOL)
 
     def _read_meta(self):
         """Reads the information about the array."""
-        if self._dtype is None:
-            if not op.isfile(self._meta):
-                raise Exception('Meta-information has not been stored yet')
+        if self._dtype is None and op.isfile(self._meta):
             with open(self._meta, 'rb') as reader:
                 self._dtype, self._shape, self._order = pickle.load(reader)
             self._check_sizes()
