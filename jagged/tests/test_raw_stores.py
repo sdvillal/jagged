@@ -1,7 +1,6 @@
 # coding=utf-8
 """Tests the raw storers."""
 from __future__ import print_function, absolute_import, unicode_literals
-from functools import partial
 from operator import itemgetter
 import os.path as op
 import bcolz
