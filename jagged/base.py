@@ -39,12 +39,12 @@ class JaggedRawStore(object):
 
     def __init__(self, path):
         super(JaggedRawStore, self).__init__()
-        self._mmpath = path
+        self._path = path
 
     def _path_or_fail(self):
-        if self._mmpath is None:
+        if self._path is None:
             raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
-        return self._mmpath
+        return self._path
 
     # --- Lifecycle
 
