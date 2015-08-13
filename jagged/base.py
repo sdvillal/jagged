@@ -262,7 +262,7 @@ class JaggedRawStore(object):
 
     def __len__(self):
         """Returns the size of the leading dimension."""
-        return self.shape[0]
+        return self.shape[0] if self.shape is not None else 0
 
     # Also consider register to atexit
 
@@ -288,7 +288,6 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
     nc = len(columns) if columns is not None else nc
 
     # Retrieve
-    print('Retrieving...')
     views = []
     if contiguity == 'read':
         # Hope for one-malloc only, but beware of memory leaks
