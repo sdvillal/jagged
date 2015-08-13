@@ -98,6 +98,7 @@ def mock_jagged_raw(dataset):
             dest[:] = jagged[base:(base+size)]
         else:
             dest[:] = jagged[base:(base+size), tuple(columns)]
+        return dest
 
     # shape
     ne, nc = jagged.shape
