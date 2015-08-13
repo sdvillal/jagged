@@ -50,8 +50,7 @@ class JaggedByCarray(JaggedRawStore):
         self.cparams = whatable(cparams, add_properties=True)
         self._bcolz = None
 
-    def _append_hook(self, data):
-        self._bcolz.append(data)
+    # --- Write
 
     def _open_write(self, data=None):
         if self._bcolz is None:
@@ -73,6 +72,11 @@ class JaggedByCarray(JaggedRawStore):
                                  expectedlen=self.expectedlen,
                                  cparams=self.cparams)
 
+    def _append_hook(self, data):
+        self._bcolz.append(data)
+
+    # --- Read
+
     def _open_read(self):
         # Open bcolz for reading
         if self._bcolz is None:
@@ -80,11 +84,6 @@ class JaggedByCarray(JaggedRawStore):
             # TODO: check that cparams are correct, if not, just transmute (make this store have the correct parameters)
             #       the same for chunksize...
             #       can be a pain in the ass, so maybe just be picky and fail?
-
-    def close(self):
-        if self.is_writing:
-            self._bcolz.flush()
-        self._bcolz = None
 
     def _get_hook(self, base, size, columns, address):
         if columns is None:
@@ -97,6 +96,8 @@ class JaggedByCarray(JaggedRawStore):
             #        it would be great if that is bundled with bcolz, so we do not depend on cython...
         return address
 
+    # --- Lifecycle
+
     @property
     def is_writing(self):
         return self.is_open and self._bcolz.mode in ('w', 'a')
@@ -108,6 +109,13 @@ class JaggedByCarray(JaggedRawStore):
     @property
     def is_open(self):
         return self._bcolz is not None
+
+    def close(self):
+        if self.is_writing:
+            self._bcolz.flush()
+        self._bcolz = None
+
+    # --- Properties
 
     def _backend_attr_hook(self, attr):
         return getattr(self._bcolz, attr)

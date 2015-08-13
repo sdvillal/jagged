@@ -33,24 +33,32 @@ class JaggedByH5Py(JaggedRawStore):
         self.shuffle = shuffle
         self.checksum = checksum
 
-    def _append_hook(self, data):
-        base = len(self)
-        size = len(data)
-        self._dset.resize(base + size, axis=0)
-        self._dset[base:(base+size)] = data
-        return base, size
+    # --- Read
 
-    @property
-    def is_writing(self):
-        return self.is_open and self._h5.mode != 'r'
+    def _open_read(self):
+        if self._h5 is None:
+            self._h5 = h5py.File(self._path_or_fail(), mode='r')
+            self._dset = self._h5[self._dset_name]
 
-    @property
-    def is_reading(self):
-        return self.is_open and self._h5.mode == 'r'
+    def _get_hook(self, base, size, columns, address):
+        if size > 0:
+            if columns is not None:
+                if not np.any(np.diff(columns) < 1):
+                    self._dset.read_direct(address, source_sel=np.s_[base:base+size, columns])
+                else:
+                    # h5py only supports increasing order indices
+                    #   https://github.com/h5py/h5py/issues/368
+                    #   https://github.com/h5py/h5py/issues/368
+                    # (boiling down to issues with hdf5 hyperslabs)
+                    # better slow than unsupported...
+                    columns, inverse = np.unique(columns, return_inverse=True)
+                    address[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
+                    # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
+            else:
+                self._dset.read_direct(address, source_sel=np.s_[base:base+size])
+        return address
 
-    @property
-    def is_open(self):
-        return self._h5 is not None
+    # --- Write
 
     def _open_write(self, data=None):
         if self._h5 is None:
@@ -72,33 +80,33 @@ class JaggedByH5Py(JaggedRawStore):
             else:
                 self._dset = self._h5[self._dset_name]
 
-    def _open_read(self):
-        if self._h5 is None:
-            self._h5 = h5py.File(self._path_or_fail(), mode='r')
-            self._dset = self._h5[self._dset_name]
+    def _append_hook(self, data):
+        base = len(self)
+        size = len(data)
+        self._dset.resize(base + size, axis=0)
+        self._dset[base:(base+size)] = data
+        return base, size
+
+    # --- Lifecycle
+
+    @property
+    def is_writing(self):
+        return self.is_open and self._h5.mode != 'r'
+
+    @property
+    def is_reading(self):
+        return self.is_open and self._h5.mode == 'r'
+
+    @property
+    def is_open(self):
+        return self._h5 is not None
 
     def close(self):
         if self._h5 is not None:
             self._h5.close()
             self._h5 = None
 
-    def _get_hook(self, base, size, columns, address):
-        if size > 0:
-            if columns is not None:
-                if not np.any(np.diff(columns) < 1):
-                    self._dset.read_direct(address, source_sel=np.s_[base:base+size, columns])
-                else:
-                    # h5py only supports increasing order indices
-                    #   https://github.com/h5py/h5py/issues/368
-                    #   https://github.com/h5py/h5py/issues/368
-                    # (boiling down to issues with hdf5 hyperslabs)
-                    # better slow than unsupported...
-                    columns, inverse = np.unique(columns, return_inverse=True)
-                    address[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
-                    # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
-            else:
-                self._dset.read_direct(address, source_sel=np.s_[base:base+size])
-        return address
+    # --- Properties
 
     def _backend_attr_hook(self, attr):
         return getattr(self._dset, attr)
