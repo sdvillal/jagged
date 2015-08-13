@@ -11,11 +11,17 @@ from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.mmap_backend import JaggedByMemMap
 
+RAW_STORES = (
+    ('jr=carray', JaggedByCarray),
+    ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
+    ('jr=h5py', JaggedByH5Py),
+    ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100)),
+    ('jr=mmap', JaggedByMemMap),
+)
 
-@pytest.yield_fixture(params=(JaggedByCarray, partial(JaggedByCarray, chunklen=100),
-                              JaggedByH5Py, partial(JaggedByH5Py, chunklen=100),
-                              JaggedByMemMap),
-                      ids=('jr=carray', 'jr=carraychunks', 'jr=h5py', 'jr=h5pychunks', 'jr=mmap'))
+
+@pytest.yield_fixture(params=[store for _, store in RAW_STORES],
+                      ids=[name for name, _ in RAW_STORES])
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
@@ -99,10 +105,12 @@ def mock_jagged_raw(dataset):
     jagged = np.vstack(originals)
 
     def reader(base, size, columns, dest):
-        if columns is None:
-            dest[:] = jagged[base:(base+size)]
-        else:
-            dest[:] = jagged[base:(base+size), tuple(columns)]
+        view = jagged[base:(base+size)]
+        if columns is not None:
+            view = view[:, tuple(columns)]
+        if dest is None:
+            return view
+        dest[:] = view
         return dest
 
     # shape
@@ -118,7 +126,7 @@ def mock_jagged_raw(dataset):
     return originals, ne, nc, originals[0].dtype, segments, reader, rng
 
 
-@pytest.fixture(params=('read', 'write', None),
-                ids=('cont=read', 'cont=write', 'cont=none'))
+@pytest.fixture(params=('read', 'write', None, 'auto'),
+                ids=('cont=read', 'cont=write', 'cont=none', 'cont=auto'))
 def contiguity(request):
     return request.param
