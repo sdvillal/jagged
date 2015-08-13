@@ -38,12 +38,12 @@ class JaggedByMemMap(JaggedRawStore):
                                  mode='r')
 
     def _get_hook(self, base, size, columns, dest):
-        if dest is None:
-            dest = self._mm[base:base+size]
-        else:
-            dest[:] = self._mm[base:base+size]
+        view = self._mm[base:base+size]
         if columns is not None:
-            dest = dest[:, columns]
+            view = view[:, columns]
+        if dest is None:
+            return view
+        dest[:] = view
         return dest
 
     # --- Write
