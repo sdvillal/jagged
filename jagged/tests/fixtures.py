@@ -3,15 +3,19 @@ from __future__ import print_function, absolute_import, unicode_literals
 
 import numpy as np
 import pytest
-from jagged.base import JaggedSimpleIndex, JaggedStore
 
+from functools import partial
+
+from jagged.base import JaggedSimpleIndex, JaggedStore
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.mmap_backend import JaggedByMemMap
 
 
-@pytest.yield_fixture(params=(JaggedByCarray, JaggedByH5Py, JaggedByMemMap),
-                      ids=('jr=carray', 'jr=h5py', 'jr=mmap'))
+@pytest.yield_fixture(params=(JaggedByCarray, partial(JaggedByCarray, chunklen=100),
+                              JaggedByH5Py, partial(JaggedByH5Py, chunklen=100),
+                              JaggedByMemMap),
+                      ids=('jr=carray', 'jr=carraychunks', 'jr=h5py', 'jr=h5pychunks', 'jr=mmap'))
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
