@@ -40,11 +40,14 @@ class JaggedByH5Py(JaggedRawStore):
             self._h5 = h5py.File(self._path_or_fail(), mode='r')
             self._dset = self._h5[self._dset_name]
 
-    def _get_hook(self, base, size, columns, address):
-        if size > 0:
+    def _get_hook(self, base, size, columns, dest):
+        if dest is None:
+            view = self._dset[base:base+size] if columns is None else self._dset[base:base+size, tuple(columns)]
+            return view  # should we force read with [:]?
+        elif size > 0:
             if columns is not None:
                 if not np.any(np.diff(columns) < 1):
-                    self._dset.read_direct(address, source_sel=np.s_[base:base+size, columns])
+                    self._dset.read_direct(dest, source_sel=np.s_[base:base+size, columns])
                 else:
                     # h5py only supports increasing order indices
                     #   https://github.com/h5py/h5py/issues/368
@@ -52,11 +55,11 @@ class JaggedByH5Py(JaggedRawStore):
                     # (boiling down to issues with hdf5 hyperslabs)
                     # better slow than unsupported...
                     columns, inverse = np.unique(columns, return_inverse=True)
-                    address[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
+                    dest[:] = self._dset[base:base+size, tuple(columns)][:, inverse]
                     # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
             else:
-                self._dset.read_direct(address, source_sel=np.s_[base:base+size])
-        return address
+                self._dset.read_direct(dest, source_sel=np.s_[base:base+size])
+        return dest
 
     # --- Write
 
