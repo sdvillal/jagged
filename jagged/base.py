@@ -109,6 +109,9 @@ class JaggedRawStore(object):
         A tuple (base, size) that addresses the appended data in the storage.
         """
 
+        # at the moment we do not allow coordinate-less stores
+        self._path_or_fail()
+
         # check data validity
         if any(s < 1 for s in data.shape[1:]):
             raise Exception('Cannot append data with sizes 0 in non-leading dimension (%s, %r)' %
@@ -178,6 +181,10 @@ class JaggedRawStore(object):
         -------
         A list with the retrieved elements, possibly transformed by factory.
         """
+
+        # at the moment we do not allow coordinate-less stores
+        self._path_or_fail()
+
         # check we can read
         if self.is_writing and not self.is_reading:
             self.close()
