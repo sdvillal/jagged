@@ -85,16 +85,18 @@ class JaggedByCarray(JaggedRawStore):
             #       the same for chunksize...
             #       can be a pain in the ass, so maybe just be picky and fail?
 
-    def _get_hook(self, base, size, columns, address):
-        if columns is None:
-            self._bcolz._getrange(base, size, address)
+    def _get_hook(self, base, size, columns, dest):
+        if dest is not None and columns is None:
+            self._bcolz._getrange(base, size, dest)  # measure if this has any performance benefit
+            return dest
+        if columns is not None:
+            view = self._bcolz[base:base+size, columns]
         else:
-            address[:] = self._bcolz[base:base+size, columns]
-            # FIXME: naive inefficient implementation (double alloc and copy)
-            #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
-            #        also look at chunk __getitem__ and _getitem, possibly others
-            #        it would be great if that is bundled with bcolz, so we do not depend on cython...
-        return address
+            view = self._bcolz[base:base+size]
+        if dest is not None:
+            dest[:] = view
+            return dest
+        return view
 
     # --- Lifecycle
 
@@ -141,4 +143,9 @@ class JaggedByCarray(JaggedRawStore):
 # Probably contiguity for further reads is better; just for example check speeds of access (way faster)
 #
 # TODO: ask for carray._getrange to be public API
+#
+# FIXME: naive inefficient implementation (double alloc and copy) for some retrievals
+#        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
+#        also look at chunk __getitem__ and _getitem, possibly others
+#        it would be great if that is bundled with bcolz, so we do not depend on cython...
 #
