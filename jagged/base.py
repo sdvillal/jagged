@@ -218,7 +218,7 @@ class JaggedRawStore(object):
           The parameters that will be fixed in the returned factory function.
         """
         return whatable(partial(self.__class__,
-                                **merge(self.what().configdict, params)),
+                                **merge(self.what().conf, params)),
                         add_properties=False)
 
     # --- Shape and dtype
