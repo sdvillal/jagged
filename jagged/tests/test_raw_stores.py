@@ -207,4 +207,29 @@ def test_chunked_copy_from(jagged_raw):
         assert 'chunksize must be None or bigger than 0, it is -1' in str(excinfo.value)
 
 
-# We should really have a look at using hypothesis
+def test_mmap_check_sizes(tmpdir):
+    dest = str(tmpdir)
+    x = np.empty((5, 2), dtype=np.int32)
+    with JaggedByMemMap(dest) as jbm:
+        jbm.append(x)
+        mmf = jbm._mmpath
+    # write row-sized junk
+    with open(mmf, 'ab') as writer:
+        writer.write('junk' * 10)
+    with JaggedByMemMap(dest) as jbm:
+        with pytest.raises(Exception) as excinfo:
+            jbm.get([(0, 2)])
+        assert 'the number or rows inferred by file size does not coincide' in str(excinfo.value)
+    # write junk that look like leftovers of an aborted write
+    with open(mmf, 'ab') as writer:
+        writer.write('jagged')
+    with JaggedByMemMap(dest) as jbm:
+        with pytest.raises(Exception) as excinfo:
+            jbm.get([(0, 2)])
+        assert 'the memmap file has incomplete data' in str(excinfo.value)
+    # make the memmap way too small
+    with open(mmf, 'wb') as writer:
+        writer.write('jagged')
+    with pytest.raises(Exception) as excinfo:
+        jbm.get([(0, 2)])
+    assert 'mmap length is greater than file size' in str(excinfo.value)
