@@ -7,10 +7,11 @@ from jagged.base import JaggedSimpleIndex, JaggedStore
 
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
+from jagged.mmap_backend import JaggedByMemMap
 
 
-@pytest.yield_fixture(params=(JaggedByCarray, JaggedByH5Py),
-                      ids=('jr=carray', 'jr=h5py'))
+@pytest.yield_fixture(params=(JaggedByCarray, JaggedByH5Py, JaggedByMemMap),
+                      ids=('jr=carray', 'jr=h5py', 'jr=mmap'))
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
