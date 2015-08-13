@@ -95,6 +95,7 @@ class JaggedByCarray(JaggedRawStore):
             #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
             #        also look at chunk __getitem__ and _getitem, possibly others
             #        it would be great if that is bundled with bcolz, so we do not depend on cython...
+        return address
 
     @property
     def is_writing(self):

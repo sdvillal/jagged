@@ -98,6 +98,7 @@ class JaggedByH5Py(JaggedRawStore):
                     # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
             else:
                 self._dset.read_direct(address, source_sel=np.s_[base:base+size])
+        return address
 
     def _backend_attr_hook(self, attr):
         return getattr(self._dset, attr)
