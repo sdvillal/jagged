@@ -132,6 +132,7 @@ class JaggedByMemMap(JaggedRawStore):
 #
 # Remember that resize for numpy mmap objects never resize the file under the hood.
 # Fortunately we do not need it here, but was bitten by it when trying to be too clever
+# Numpy mmap ndarray subclass code is simple and neat, can be read in no time. Get back there.
 #
 # Document that when using mode 'auto', everything returned is a view to the large
 # memmapped array. TEST that there is no much memory leaking going on. Document that
