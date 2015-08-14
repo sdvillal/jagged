@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover
 class JaggedByMemMap(JaggedRawStore):
     """Provides numpy arrays as views of an underlying memmapped array."""
 
-    def __init__(self, path=None):
+    def __init__(self, path=None, autoviews=True):
         super(JaggedByMemMap, self).__init__(path)
 
         if self._path is not None:
@@ -28,6 +28,8 @@ class JaggedByMemMap(JaggedRawStore):
         self._dtype = None
         self._shape = None
         self._order = None
+
+        self.autoviews = autoviews
 
     # --- Read
 
@@ -43,7 +45,7 @@ class JaggedByMemMap(JaggedRawStore):
         if columns is not None:
             view = view[:, tuple(columns)]
         if dest is None:
-            return view
+            return view.copy() if not self.autoviews else view
         dest[:] = view
         return dest
 
