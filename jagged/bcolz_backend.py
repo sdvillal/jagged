@@ -54,7 +54,7 @@ class JaggedByCarray(JaggedRawStore):
 
     def _open_write(self, data=None):
         if self._bcolz is None:
-            try:  # try opening 'a' mode
+            try:  # append
                 self._bcolz = \
                     bcolz.carray(None,
                                  rootdir=ensure_dir(self._path_or_fail()),
@@ -63,7 +63,7 @@ class JaggedByCarray(JaggedRawStore):
                                  chunklen=self.chunklen,
                                  expectedlen=self.expectedlen,
                                  cparams=self.cparams)
-            except:  # try opening 'w' mode
+            except:  # create
                 self._bcolz = \
                     bcolz.carray(data[0:0],
                                  rootdir=ensure_dir(self._path_or_fail()),
@@ -78,12 +78,8 @@ class JaggedByCarray(JaggedRawStore):
     # --- Read
 
     def _open_read(self):
-        # Open bcolz for reading
         if self._bcolz is None:
             self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
-            # TODO: check that cparams are correct, if not, just transmute (make this store have the correct parameters)
-            #       the same for chunksize...
-            #       can be a pain in the ass, so maybe just be picky and fail?
 
     def _get_hook(self, base, size, columns, dest):
         if dest is not None and columns is None:
@@ -122,6 +118,7 @@ class JaggedByCarray(JaggedRawStore):
     def _backend_attr_hook(self, attr):
         return getattr(self._bcolz, attr)
 
+
 #
 # Can bcolz be apt for random row retrieval and range queries?
 # Because of our query types and usage patterns, probably yes...
@@ -148,4 +145,9 @@ class JaggedByCarray(JaggedRawStore):
 #        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
 #        also look at chunk __getitem__ and _getitem, possibly others
 #        it would be great if that is bundled with bcolz, so we do not depend on cython...
+#
+# TODO: on open read, check that cparams are correct,
+#       if not, just transmute (make this store have the correct parameters)
+#       the same for chunksize...
+#       can be a pain in the ass, so maybe just be picky and fail?
 #
