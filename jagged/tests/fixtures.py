@@ -11,6 +11,7 @@ from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.mmap_backend import JaggedByMemMap
 from jagged.npy_backend import JaggedByNPY
+from jagged.bloscpack_backend import JaggedByBloscpack
 
 RAW_STORES = []
 
@@ -26,7 +27,8 @@ for contiguity in ('read', 'write', None, 'auto'):
     for name, store in SEGMENT_RAW_STORES:
         RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
 
-RAW_STORES.append(('jr=npy', JaggedByNPY))
+RAW_STORES.extend([('jr=npy', JaggedByNPY),
+                   ('jr=blp', JaggedByBloscpack)])
 
 stores = [store for _, store in RAW_STORES]
 names = [name for name, _ in RAW_STORES]

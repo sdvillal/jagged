@@ -41,7 +41,7 @@ setup(
                       # DELETE THESE
                       'pandas',
                       'seaborn',
-                      'matplotlib', 'bcolz'],
+                      'matplotlib', 'bcolz', 'bloscpack'],
     extras_require={
         'bcolz': ['bcolz'],
         'h5py': ['h5py'],

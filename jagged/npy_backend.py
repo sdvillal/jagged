@@ -29,7 +29,7 @@ class JaggedByNPY(JaggedRawStore):
         return self._shards
         # random note, 256 is the last cached int in cpython
 
-    def _npy(self, index):
+    def _dest_file(self, index):
         return op.join(self._shards[index % 256], '%d.npy' % index)
 
     def _infer_numarrays(self):
@@ -88,7 +88,7 @@ class JaggedByNPY(JaggedRawStore):
 
     def _append_hook(self, data):
         assert self.is_compatible(data)
-        np.save(self._npy(self._read_numarrays()), data)
+        self._write_one(data)
         self._numarrays += 1
         if self._size is None:
             self._size = len(data)
@@ -97,13 +97,19 @@ class JaggedByNPY(JaggedRawStore):
         self._write_size()
         return self._numarrays - 1
 
+    def _write_one(self, data):
+        np.save(self._dest_file(self._read_numarrays()), data)
+
     # --- Read
 
     def _open_read(self):
         self._writing = False
 
+    def _read_one(self, key):
+        return np.load(self._dest_file(key))
+
     def _get_one(self, key, columns):
-        data = np.load(self._npy(key))
+        data = self._read_one(key)
         if columns is not None:
             data = data[:, tuple(columns)]
         return data
