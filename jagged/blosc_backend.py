@@ -72,7 +72,7 @@ class JaggedByBlosc(JaggedRawStore):
         self._writing = False
 
     def _open_write(self, data=None):
-        self._handle = open(op.join(self._path_or_fail(), 'data'), 'a')
+        self._handle = open(op.join(self._path_or_fail(), 'data'), 'ab')
         self._writing = True
 
     def iter_segments(self, segments_per_chunk=None):  # copied verbatim from NPY, factorise

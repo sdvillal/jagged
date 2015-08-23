@@ -40,29 +40,29 @@ class Compressor(object):
     def uncompress(self, cdata):
         return self.decompress(cdata)
 
-
-class ZLIB(Compressor):
-    """
-    Examples
-    --------
-    >>> x = '1' * 8
-    >>> compressor = ZLIB()
-    >>> cx = compressor.compress(x)
-    >>> x == compressor.decompress(cx)
-    True
-    >>> print(compressor.what().id())
-    ZLIB(level=5)
-    """
-
-    def __init__(self, level=5):
-        self.level = level
-
-    def compress(self, data):
-        return zlib.compress(data, self.level)
-
-    def decompress(self, cdata):
-        return zlib.decompress(cdata)
-
+#
+# class ZLIB(Compressor):
+#     """
+#     Examples
+#     --------
+#     >>> x = '1' * 8
+#     >>> compressor = ZLIB()
+#     >>> cx = compressor.compress(x)
+#     >>> x == compressor.decompress(cx)
+#     True
+#     >>> print(compressor.what().id())
+#     ZLIB(level=5)
+#     """
+#
+#     def __init__(self, level=5):
+#         self.level = level
+#
+#     def compress(self, data):
+#         return zlib.compress(data, self.level)
+#
+#     def decompress(self, cdata):
+#         return zlib.decompress(cdata)
+#
 #
 # class BZ2(Compressor):
 #     """
