@@ -40,11 +40,52 @@ class JaggedRawStore(object):
     def __init__(self, path):
         super(JaggedRawStore, self).__init__()
         self._path = path
+        self._template = None   # how the saved arrays look like
+        self._numarrays = None  # total number of arrays
+        self._numrows = None    # total number or rows
 
     def _path_or_fail(self):
         if self._path is None:
             raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
-        return self._path
+        return ensure_dir(self._path)
+
+    # --- Template
+
+    def _read_template(self):
+        template_path = op.join(self._path_or_fail(), 'template.npy')
+        if self._template is None:
+            if op.isfile(template_path):
+                self._template = np.load(template_path)
+        return self._template
+
+    def _write_template(self, data):
+        template_path = op.join(self._path_or_fail(), 'template.npy')
+        np.save(template_path, data[:0])
+
+    def is_compatible(self, data):
+        template = self._read_template()
+        if template is None:
+            return True
+        return (template.dtype >= data.dtype and
+                data.shape[-1] == template.shape[-1] and
+                np.isfortran(data) == np.isfortran(data))
+        # Obviously we could just store arbitrary arrays in some implementations
+        # But lets keep jagged contracts...
+
+    def _read_numarrays(self):
+        if self._numarrays is None:
+            if op.isfile(op.join(self._path_or_fail(), 'numarrays.txt')):
+                with open(op.join(self._path_or_fail(), 'numarrays.txt'), 'r') as reader:
+                    self._numarrays = int(reader.read())
+            else:
+                self._numarrays = 0
+                self._write_numarrays()
+        return self._numarrays
+
+    def _write_numarrays(self):
+        if self._numarrays is not None:
+            with open(op.join(self._path_or_fail(), 'numarrays.txt'), 'w') as writer:
+                writer.write('%d' % self._numarrays)
 
     # --- Lifecycle
 
@@ -121,6 +162,11 @@ class JaggedRawStore(object):
         if self.is_reading and not self.is_writing:
             self.close()
 
+        # template
+        if self._read_template() is None:
+            self._write_template(data)
+        assert self.is_compatible(data)
+
         # open
         self._open_write(data)
 
@@ -130,6 +176,20 @@ class JaggedRawStore(object):
         # bookkeping
         self._save_segment_info(data)
 
+        if self._numrows is None:
+            self._numrows = len(data)
+        else:
+            self._numrows += len(data)
+        self._write_numrows()
+
+        # TODO: quick and dirty, revisit and simplify
+        if self._numarrays is None:
+            self._numarrays = 1
+        else:
+            self._numarrays += 1
+        self._write_numarrays()
+
+        # done
         return coords
 
     def _save_segment_info(self, data):
@@ -227,10 +287,24 @@ class JaggedRawStore(object):
 
     # --- Shape and dtype
 
-    def _backend_attr_hook(self, attr):
-        raise NotImplementedError()
+    def _read_numrows(self):
+        if self._numrows is None:
+            if op.isfile(op.join(self._path_or_fail(), 'size.txt')):
+                with open(op.join(self._path_or_fail(), 'size.txt')) as reader:
+                    self._numrows = int(reader.read())
+            else:
+                return 0
+        return self._numrows
+
+    def _write_numrows(self):
+        if self._numrows is not None:
+            with open(op.join(self._path_or_fail(), 'size.txt'), 'w') as writer:
+                writer.write('%d' % self._numrows)
 
     def _backend_attr(self, attr):
+        # TODO: probably this can be simplified:
+        #  - removed in favor of _backend_attr_hook
+        #  - remove reimplementations in subclasses
         if not self.is_open:
             with self:
                 try:
@@ -239,6 +313,13 @@ class JaggedRawStore(object):
                 except IOError:
                     return None
         return self._backend_attr_hook(attr)
+
+    def _backend_attr_hook(self, attr):
+        if self._read_template() is None:
+            return None
+        if attr == 'shape':
+            return self._read_numrows(), self._read_template().shape[1]
+        return getattr(self._read_template(), attr)
 
     @property
     def shape(self):
@@ -271,7 +352,7 @@ class JaggedRawStore(object):
     # Also consider register to atexit
 
 
-class SegmentRawStorage(JaggedRawStore):
+class LinearRawStorage(JaggedRawStore):
 
     def __init__(self, path, contiguity=None):
         """
@@ -296,7 +377,7 @@ class SegmentRawStorage(JaggedRawStore):
            beware that forcing contiguity for speed might lead to memory leaks
            (the whole retrieved segments won't be released while any of them is reacheable)
         """
-        super(SegmentRawStorage, self).__init__(path)
+        super(LinearRawStorage, self).__init__(path)
         self.contiguity = contiguity
 
     def _get_views(self, keys, columns):

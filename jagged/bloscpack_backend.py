@@ -43,7 +43,6 @@ class JaggedByBloscpack(JaggedByNPY):
                                                    clevel=self.clevel,
                                                    shuffle=self.shuffle,
                                                    cname=self.cname)
-        # should we go also to set the chunksize? default is 1M
         pack_ndarray_file(data, self._dest_file(self._read_numarrays()),
                           chunk_size=self.chunk_size,
                           blosc_args=self._blosc_args,

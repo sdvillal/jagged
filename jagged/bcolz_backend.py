@@ -1,12 +1,12 @@
 # coding=utf-8
 import bcolz
 
-from jagged.base import SegmentRawStorage
+from jagged.base import LinearRawStorage
 from jagged.misc import ensure_dir
 from whatami import whatable
 
 
-class JaggedByCarray(SegmentRawStorage):
+class JaggedByCarray(LinearRawStorage):
     """
     A Jagged store that uses in-disk `bcolz.carray` to store the data.
 

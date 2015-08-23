@@ -4,10 +4,10 @@ import os.path as op
 import numpy as np
 import h5py
 
-from jagged.base import SegmentRawStorage
+from jagged.base import LinearRawStorage
 
 
-class JaggedByH5Py(SegmentRawStorage):
+class JaggedByH5Py(LinearRawStorage):
 
     def __init__(self,
                  path=None,
@@ -134,6 +134,7 @@ class JaggedByH5Py(SegmentRawStorage):
         return getattr(self._dset, attr)
 
 
+#
 # From h5py docs:
 # Chunking has performance implications.
 # It’s recommended to keep the total size of your chunks between 10 KiB and 1 MiB,

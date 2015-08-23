@@ -4,7 +4,7 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import os.path as op
 from future.utils import PY3
 import numpy as np
-from jagged.base import SegmentRawStorage
+from jagged.base import LinearRawStorage
 from jagged.misc import ensure_dir
 
 try:
@@ -13,7 +13,7 @@ except ImportError:  # pragma: no cover
     import pickle
 
 
-class JaggedByMemMap(SegmentRawStorage):
+class JaggedByMemMap(LinearRawStorage):
     """Provides numpy arrays as views of an underlying memmapped array."""
 
     def __init__(self, path=None, autoviews=True, contiguity=None):
