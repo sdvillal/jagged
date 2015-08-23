@@ -26,7 +26,7 @@ for contiguity in ('read', 'write', None, 'auto'):
     for name, store in SEGMENT_RAW_STORES:
         RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
 
-# RAW_STORES.append(('jr=npy', JaggedByNPY))
+RAW_STORES.append(('jr=npy', JaggedByNPY))
 
 stores = [store for _, store in RAW_STORES]
 names = [name for name, _ in RAW_STORES]

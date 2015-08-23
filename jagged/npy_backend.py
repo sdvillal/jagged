@@ -151,10 +151,3 @@ class JaggedByNPY(JaggedRawStore):
         if attr == 'shape':
             return self._read_size(), self._read_template().shape[1]
         return getattr(self._read_template(), attr)
-
-if __name__ == '__main__':
-
-    jbn = JaggedByNPY(op.join(op.expanduser('~'), 'npys-test'))
-    jbn.append(np.ones((10, 10)))
-    print(jbn.shape)
-    print(jbn.get((5, 3, 2), columns=(2, 4)))
