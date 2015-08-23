@@ -1,9 +1,12 @@
+from functools import partial
 from mmap import mmap, ACCESS_READ
 from operator import itemgetter
 import os.path as op
 import numpy as np
+from toolz import merge, partition_all
 from jagged.base import JaggedRawStore
 from jagged.compression.compressors import BloscCompressor
+from whatami import whatable
 
 
 class JaggedByBlosc(JaggedRawStore):
@@ -27,6 +30,11 @@ class JaggedByBlosc(JaggedRawStore):
         self._bytes_file = None
         self._handle = None
         self._writing = None
+
+    def copyconf(self, **params):
+        conf = self.what().conf.copy()
+        conf['compressor'] = self._compressor_factory  # weird, rethink
+        return whatable(partial(self.__class__, **merge(conf, params)), add_properties=False)
 
     def _make_compressor(self):
         if self._compressor is None:
@@ -66,6 +74,16 @@ class JaggedByBlosc(JaggedRawStore):
     def _open_write(self, data=None):
         self._handle = open(op.join(self._path_or_fail(), 'data'), 'a')
         self._writing = True
+
+    def iter_segments(self, segments_per_chunk=None):  # copied verbatim from NPY, factorise
+        if segments_per_chunk is None:
+            for key in range(self._read_numarrays()):
+                yield self.get([key])
+        elif segments_per_chunk <= 0:
+            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
+        else:
+            for segments in partition_all(segments_per_chunk, range(self._read_numarrays())):
+                yield self.get(segments)
 
     def _get_views(self, keys, columns):
 
