@@ -545,19 +545,19 @@ class JaggedStore(object):
         else:
             raise KeyError('Cannot add key %r' % (key,))
 
-    def get(self, keys=None, columns=None, factory=None, index='main', contiguity=None):
+    def get(self, keys=None, columns=None, factory=None, index='main'):
         index = self.index(index)
         if keys is None:
             keys = map(itemgetter(0), index.sorted_keys())
             # N.B. slow, since we already have the indices of the segments we could save us more searchs
-        return self._jagged.get(index.get(keys), columns=columns, factory=factory, contiguity=contiguity)
+        return self._jagged.get(index.get(keys), columns=columns, factory=factory)
 
-    def iter(self, keys=None, columns=None, factory=None, index='main', contiguity=None):
+    def iter(self, keys=None, columns=None, factory=None, index='main'):
         index = self.index(index)
         if keys is None:
             keys = map(itemgetter(0), index.sorted_keys())
-        return (self._jagged.get((segment,), columns=columns, factory=factory, contiguity=contiguity)[0]
-                for segment in index.get(keys))  # TODO contiguity here will make sense when we use chunks
+        return (self._jagged.get((segment,), columns=columns, factory=factory)[0]
+                for segment in index.get(keys))
         # we should also add a chunksize parameter and allow to retrieve by chunks
         # of course now chunks have a logical meaning (= number of segments)
         # so imagining memory consumption would now be a bit more indirect task
