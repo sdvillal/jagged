@@ -3,6 +3,7 @@ from itertools import chain
 import os.path as op
 import os
 import numpy as np
+from toolz import partition_all
 from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
 
@@ -111,6 +112,17 @@ class JaggedByNPY(JaggedRawStore):
         if keys is None:
             return [np.vstack([self._get_one(key, columns) for key in range(self._read_numarrays())])]
         return [self._get_one(key, columns) for key in keys]
+
+    # --- Iterate
+    def iter_segments(self, segments_per_chunk=None):
+        if segments_per_chunk is None:
+            for key in range(self._read_numarrays()):
+                yield self.get([key])
+        elif segments_per_chunk <= 0:
+            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
+        else:
+            for segments in partition_all(segments_per_chunk, range(self._read_numarrays())):
+                yield self.get(segments)
 
     # --- Lifecycle
 

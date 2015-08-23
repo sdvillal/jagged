@@ -25,6 +25,7 @@ def test_lifecycle(jagged_raw):
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
         assert jr.ndim == data0.ndim
+        assert jr.read_segments() == [(0, len(data0))]
         # first read
         assert np.allclose(data0, jr.get()[0])
         # even if we close it...
@@ -44,6 +45,7 @@ def test_lifecycle(jagged_raw):
         assert jr.shape == expected.shape
         assert jr.dtype == expected.dtype
         assert jr.ndim == expected.ndim
+        assert jr.read_segments() == [(0, len(data0)), (len(data0), len(data1))]
         # and the data will be properlly appended
         assert np.allclose(expected, jr.get()[0])
 
@@ -203,8 +205,9 @@ def test_chunked_copy_from(jagged_raw):
     path0 = ensure_dir(op.join(path, 'test0'))
     path1 = ensure_dir(op.join(path, 'test1'))
     with jagged_raw(path0) as jr0, jagged_raw(path1) as jr1:
-        jr0.append(np.zeros((2, 10)))
-        jr0.append(np.ones((3, 10)))
+        for _ in range(10):
+            jr0.append(np.zeros((2, 10)))
+            jr0.append(np.ones((3, 10)))
         jr1.append_from(jr0, chunksize=2)
         assert np.allclose(jr0.get()[0], jr1.get()[0])
         with pytest.raises(ValueError) as excinfo:

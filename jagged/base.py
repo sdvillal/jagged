@@ -19,7 +19,7 @@ from functools import partial
 import os.path as op
 from operator import itemgetter
 
-from toolz import merge
+from toolz import merge, partition_all
 import numpy as np
 
 from jagged.misc import ensure_dir, subsegments, is_valid_segment
@@ -137,22 +137,35 @@ class JaggedRawStore(object):
             writer.write('%d\n' % len(data))
 
     def read_segments(self):
-        sizes = np.loadtxt(op.join(self._path_or_fail(), 'segment_sizes.csv'))
-        bases = np.cumsum(sizes)
+        sizes = np.atleast_1d(np.loadtxt(op.join(self._path_or_fail(), 'segment_sizes.csv'), dtype=int))
+        bases = np.hstack(([0], np.cumsum(sizes)))
         return list(zip(bases, sizes))
+
+    def iter_segments(self, segments_per_chunk=None):
+        if segments_per_chunk is None:
+            for segment in self.read_segments():
+                yield self.get([segment])
+        elif segments_per_chunk <= 0:
+            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
+        else:
+            for segments in partition_all(segments_per_chunk, self.read_segments()):
+                yield self.get(segments)
+
+    def iter_rows(self, max_rows_per_chunk):
+        # Iterates segments in chunks with max_rows_per_chunk as upper bound
+        # (but will give at least one segment at a time)
+        # This can be more (e.g. SegmentRawStorage) or less involved (e.g. JaggedByNumpy)
+        # Useful to iterate with really controlled amount of memory
+        raise NotImplementedError()
 
     def _append_hook(self, data):
         raise NotImplementedError()
 
     def append_from(self, jagged, chunksize=None):
         """Appends all the contents of `jagged`."""
-        if chunksize is None:
-            self.append(jagged.get()[0])
-        elif chunksize <= 0:
-            raise ValueError('chunksize must be None or bigger than 0, it is %r' % chunksize)
-        else:
-            for chunk in jagged.iterchunks(chunksize):
-                self.append(chunk)
+        for chunk in jagged.iter_segments(chunksize):
+            for data in chunk:
+                self.append(data)
 
     # --- Reading data
 
@@ -301,7 +314,9 @@ class SegmentRawStorage(JaggedRawStore):
         raise NotImplementedError()
 
     def iterchunks(self, chunksize):
-        """Reads `chunksize` rows at a time until all is read."""
+        """Reads `chunksize` rows at a time until all is read.
+        As opposed to iter_rows, this warrants equal sized, never bigger than specified, chunks.
+        """
         base = 0
         total = len(self)
         while base < total:
