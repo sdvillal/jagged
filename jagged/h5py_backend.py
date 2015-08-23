@@ -24,7 +24,7 @@ class JaggedByH5Py(SegmentRawStorage):
         self._dset_name = dset_name
 
         if self._path is not None:
-            self._path = op.join(self._path, 'data.h5')
+            self._h5_path = op.join(self._path, 'data.h5')
         self._h5 = None
         self._dset = None
 
@@ -38,7 +38,7 @@ class JaggedByH5Py(SegmentRawStorage):
 
     def _open_read(self):
         if self._h5 is None:
-            self._h5 = h5py.File(self._path_or_fail(), mode='r')
+            self._h5 = h5py.File(self._h5_path, mode='r')
             self._dset = self._h5[self._dset_name]
 
     def _get_hook(self, base, size, columns, dest):
@@ -84,7 +84,7 @@ class JaggedByH5Py(SegmentRawStorage):
 
     def _open_write(self, data=None):
         if self._h5 is None:
-            self._h5 = h5py.File(self._path_or_fail(), mode='a')
+            self._h5 = h5py.File(self._h5_path, mode='a')
             if 'data' not in self._h5:
                 # http://docs.h5py.org/en/latest/high/dataset.html
                 chunks = None
