@@ -15,7 +15,7 @@ before_install:
  - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas toolz
  - source activate test
  - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
- - travis_retry pip install blosc
+ - travis_retry pip install blosc bloscpack
  - travis_retry pip install git+https://github.com/sdvillal/whatami.git@ced628c07bd1#egg=whatami==4.0.git
 
 script:
