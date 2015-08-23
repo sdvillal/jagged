@@ -102,7 +102,7 @@ class JaggedByBlosc(JaggedRawStore):
             if columns is not None:
                 array = array[:, tuple(columns)]
             views.append((array, order))
-        views = map(itemgetter(0), sorted(views, key=itemgetter(1)))
+        views = list(map(itemgetter(0), sorted(views, key=itemgetter(1))))
         if concat:
             return [np.vstack(views)]
         return views
