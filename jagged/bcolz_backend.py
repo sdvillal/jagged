@@ -76,7 +76,6 @@ class JaggedByCarray(JaggedRawStore):
         self._bcolz.append(data)
         return len(self) - len(data), len(data)
 
-
     # --- Read
 
     def _open_read(self):
