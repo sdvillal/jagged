@@ -125,7 +125,21 @@ class JaggedRawStore(object):
         self._open_write(data)
 
         # write
-        return self._append_hook(data)
+        coords = self._append_hook(data)
+
+        # bookkeping
+        self._save_segment_info(data)
+
+        return coords
+
+    def _save_segment_info(self, data):
+        with open(op.join(self._path_or_fail(), 'segment_sizes.csv'), 'a') as writer:
+            writer.write('%d\n' % len(data))
+
+    def read_segments(self):
+        sizes = np.loadtxt(op.join(self._path_or_fail(), 'segment_sizes.csv'))
+        bases = np.cumsum(sizes)
+        return list(zip(bases, sizes))
 
     def _append_hook(self, data):
         raise NotImplementedError()
@@ -287,7 +301,7 @@ class SegmentRawStorage(JaggedRawStore):
         raise NotImplementedError()
 
     def iterchunks(self, chunksize):
-        """Reads `chunksize` elements at a time until all is read."""
+        """Reads `chunksize` rows at a time until all is read."""
         base = 0
         total = len(self)
         while base < total:
