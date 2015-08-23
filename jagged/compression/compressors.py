@@ -63,101 +63,102 @@ class ZLIB(Compressor):
     def decompress(self, cdata):
         return zlib.decompress(cdata)
 
-
-class BZ2(Compressor):
-    """
-    Examples
-    --------
-    >>> x = '1' * 8
-    >>> compressor = BZ2()
-    >>> cx = compressor.compress(x)
-    >>> x == compressor.decompress(cx)
-    True
-    >>> print(compressor.what().id())
-    BZ2(level=5)
-    """
-
-    def __init__(self, level=5):
-        self.level = level
-
-    def compress(self, data):
-        return bz2.compress(data, compresslevel=self.level)
-
-    def decompress(self, cdata):
-        return bz2.decompress(cdata)
-
-
-class LZ4(Compressor):
-    """
-    Examples
-    --------
-    >>> x = '1' * 8
-    >>> compressor = LZ4()
-    >>> cx = compressor.compress(x)
-    >>> x == compressor.decompress(cx)
-    True
-    >>> print(compressor.what().id())
-    LZ4(hc=True)
-    """
-
-    def __init__(self, hc=True):
-        if lz4 is None:
-            raise Exception('Cannot find lz4; please install python-lz4')
-        self.hc = hc
-
-    def compress(self, data):
-        if self.hc:
-            return lz4.compressHC(data)
-        return lz4.compress(data)
-
-    def decompress(self, cdata):
-        return lz4.uncompress(cdata)
-
-
-class ZSTD(Compressor):
-    """
-    Examples
-    --------
-    >>> x = '1' * 8
-    >>> compressor = ZSTD()
-    >>> cx = compressor.compress(x)
-    >>> x == compressor.decompress(cx)
-    True
-    >>> print(compressor.what().id())
-    ZSTD()
-    """
-
-    def __init__(self):
-        if zstd is None:
-            raise Exception('Cannot find zstd; please install python-zstd')
-
-    def compress(self, data):
-        return zstd.compress(data)
-
-    def decompress(self, cdata):
-        return zstd.decompress(cdata)
-
-
-class BLOSC(Compressor):
-
-    def __init__(self, typesize, level=5, shuffle=True, cname='blosclz', n_threads=1):
-        if blosc is None:
-            raise Exception('Cannot find blosc; please install python-blosc')
-        blosc.set_nthreads(n_threads)  # mmmm global
-        self.level = level
-        self.shuffle = shuffle  # 0=None, 1=ByteShuffle, 2=BitShuffle (blosc >= 1.7.0, need AVX2 to be fast)
-        self.cname = cname
-        self._typesize = typesize
-
-    def compress(self, data):
-        return blosc.compress(data,
-                              typesize=self._typesize,
-                              clevel=self.level,
-                              shuffle=self.shuffle,
-                              cname=self.cname)
-
-    def decompress(self, cdata):
-        return blosc.decompress(cdata)
+#
+# class BZ2(Compressor):
+#     """
+#     Examples
+#     --------
+#     >>> x = '1' * 8
+#     >>> compressor = BZ2()
+#     >>> cx = compressor.compress(x)
+#     >>> x == compressor.decompress(cx)
+#     True
+#     >>> print(compressor.what().id())
+#     BZ2(level=5)
+#     """
+#
+#     def __init__(self, level=5):
+#         self.level = level
+#
+#     def compress(self, data):
+#         return bz2.compress(data, compresslevel=self.level)
+#
+#     def decompress(self, cdata):
+#         return bz2.decompress(cdata)
+#
+#
+# class LZ4(Compressor):
+#     """
+#     Examples
+#     --------
+#     >>> x = '1' * 8
+#     >>> compressor = LZ4()
+#     >>> cx = compressor.compress(x)
+#     >>> x == compressor.decompress(cx)
+#     True
+#     >>> print(compressor.what().id())
+#     LZ4(hc=True)
+#     """
+#
+#     def __init__(self, hc=True):
+#         if lz4 is None:
+#             raise Exception('Cannot find lz4; please install python-lz4')
+#         self.hc = hc
+#
+#     def compress(self, data):
+#         if self.hc:
+#             return lz4.compressHC(data)
+#         return lz4.compress(data)
+#
+#     def decompress(self, cdata):
+#         return lz4.uncompress(cdata)
+#
+#
+# class ZSTD(Compressor):
+#     """
+#     Examples
+#     --------
+#     >>> x = '1' * 8
+#     >>> compressor = ZSTD()
+#     >>> cx = compressor.compress(x)
+#     >>> x == compressor.decompress(cx)
+#     True
+#     >>> print(compressor.what().id())
+#     ZSTD()
+#     """
+#
+#     def __init__(self):
+#         if zstd is None:
+#             raise Exception('Cannot find zstd; please install python-zstd')
+#
+#     def compress(self, data):
+#         return zstd.compress(data)
+#
+#     def decompress(self, cdata):
+#         return zstd.decompress(cdata)
+#
+#
+# class BLOSC(Compressor):
+#
+#     def __init__(self, typesize, level=5, shuffle=True, cname='blosclz', n_threads=1):
+#         if blosc is None:
+#             raise Exception('Cannot find blosc; please install python-blosc')
+#         blosc.set_nthreads(n_threads)  # mmmm global
+#         self.level = level
+#         self.shuffle = shuffle  # 0=None, 1=ByteShuffle, 2=BitShuffle (blosc >= 1.7.0, need AVX2 to be fast)
+#         self.cname = cname
+#         self._typesize = typesize
+#
+#     def compress(self, data):
+#         return blosc.compress(data,
+#                               typesize=self._typesize,
+#                               clevel=self.level,
+#                               shuffle=self.shuffle,
+#                               cname=self.cname)
+#
+#     def decompress(self, cdata):
+#         return blosc.decompress(cdata)
+#
 
 
 def compress_diff(x, shuffle=True, level=5, cname='lz4hc'):
