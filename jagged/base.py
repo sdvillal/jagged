@@ -142,10 +142,10 @@ class JaggedRawStore(object):
 
     # --- Reading data
 
-    def _get_hook(self, base, size, columns, dest):
+    def _get_views(self, keys, columns):
         raise NotImplementedError()
 
-    def get(self, keys=None, columns=None, factory=None, contiguity=None):
+    def get(self, keys=None, columns=None, factory=None):
         """Returns a list with the data specified in `keys` (and `columns`), possibly transformed by `factory`.
 
         Concrete implementations may warrant things like "all segments actually lie in congiguous regions in memory".
@@ -162,22 +162,6 @@ class JaggedRawStore(object):
           transforms each of the returned elements into a desired type (for example, a pandas DataFrame)
           another use can be to apply summary statistics
 
-        contiguity : string or None, default None
-           indicates the type of contiguity sought for the results; for performance segments retrieval
-           does not need to be done in any order
-             - 'read': a best effort should be done to leave retrieved segments order-contiguous in memory;
-                       this can potentially speed up operations reading these data in the order specified by segments
-             - 'write': a best effort should be done to write segments sequentially in memory;
-                        this can potentially speed up retrieval
-             - 'auto': allow the backend to decide the return flavor;
-                       using this the backends can return "lazy" or "cached" arrays
-                       (for example, views on memmapped arrays or hdf5 datasets)
-             - None: do not force any contiguity nor allow any strange return, just plain numpy arrays
-                     owning their own data; this is safest and usually well performing
-           usually 'read' can be a good idea for analysis, and 'auto' can have memory saving benefits
-           beware that forcing contiguity for speed might lead to memory leaks
-           (the whole retrieved segments won't be released while any of them is reacheable)
-
         Returns
         -------
         A list with the retrieved elements, possibly transformed by factory.
@@ -186,30 +170,17 @@ class JaggedRawStore(object):
         # at the moment we do not allow coordinate-less stores
         self._path_or_fail()
 
-        # check we can read
+        # flush if needed
         if self.is_writing and not self.is_reading:
             self.close()
 
         # open
         self._open_read()
 
-        # get one segment with all if segments is None
-        if keys is None:
-            keys = [(0, len(self))]
+        # read
+        views = self._get_views(keys, columns)
 
-        # retrieve data
-        ne, nc = self.shape
-        views = retrieve_contiguous(keys, columns, self._get_hook, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
-
-    def iterchunks(self, chunksize):
-        """Reads `chunksize` elements at a time until all is read."""
-        base = 0
-        total = len(self)
-        while base < total:
-            size = min(chunksize, total - base)
-            yield self.get([(base, size)])[0]
-            base += size
 
     # --- Factories / curries / partials
 
@@ -225,9 +196,7 @@ class JaggedRawStore(object):
         params: **dict
           The parameters that will be fixed in the returned factory function.
         """
-        return whatable(partial(self.__class__,
-                                **merge(self.what().conf, params)),
-                        add_properties=False)
+        return whatable(partial(self.__class__, **merge(self.what().conf, params)), add_properties=False)
 
     # --- Shape and dtype
 
@@ -265,7 +234,7 @@ class JaggedRawStore(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *_):
         self.close()
 
     def __len__(self):
@@ -273,6 +242,58 @@ class JaggedRawStore(object):
         return self.shape[0] if self.shape is not None else 0
 
     # Also consider register to atexit
+
+
+class SegmentRawStorage(JaggedRawStore):
+
+    def __init__(self, path, contiguity=None):
+        """
+        A segment raw storage can access arbitrary rows using base (row index in the storage) and size
+        (number of rows to retrieve).
+
+        Parameters
+        ----------
+        contiguity : string or None, default None
+           indicates the type of contiguity sought for the results; for performance segments retrieval
+           does not need to be done in any order
+             - 'read': a best effort should be done to leave retrieved segments order-contiguous in memory;
+                       this can potentially speed up operations reading these data in the order specified by segments
+             - 'write': a best effort should be done to write segments sequentially in memory;
+                        this can potentially speed up retrieval
+             - 'auto': allow the backend to decide the return flavor;
+                       using this the backends can return "lazy" or "cached" arrays
+                       (for example, views on memmapped arrays or hdf5 datasets)
+             - None: do not force any contiguity nor allow any strange return, just plain numpy arrays
+                     owning their own data; this is safest and usually well performing
+           usually 'read' can be a good idea for analysis, and 'auto' can have memory saving benefits
+           beware that forcing contiguity for speed might lead to memory leaks
+           (the whole retrieved segments won't be released while any of them is reacheable)
+        """
+        super(SegmentRawStorage, self).__init__(path)
+        self.contiguity = contiguity
+
+    def _get_views(self, keys, columns):
+        # get one segment with all if segments is None
+        if keys is None:
+            keys = [(0, len(self))]
+
+        # retrieve data
+        ne, nc = self.shape
+        views = retrieve_contiguous(keys, columns, self._get_hook, self.dtype, ne, nc, self.contiguity)
+
+        return views
+
+    def _get_hook(self, base, size, columns, dest):
+        raise NotImplementedError()
+
+    def iterchunks(self, chunksize):
+        """Reads `chunksize` elements at a time until all is read."""
+        base = 0
+        total = len(self)
+        while base < total:
+            size = min(chunksize, total - base)
+            yield self.get([(base, size)])[0]
+            base += size
 
 
 def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
@@ -585,7 +606,7 @@ class JaggedStore(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *_):
         self.close()
 
     def __len__(self):

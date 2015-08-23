@@ -4,20 +4,20 @@ from __future__ import absolute_import, unicode_literals, print_function, divisi
 import os.path as op
 from future.utils import PY3
 import numpy as np
-from jagged.base import JaggedRawStore
+from jagged.base import SegmentRawStorage
 from jagged.misc import ensure_dir
 
-try:  # pragma: no cover
+try:
     import cPickle as pickle
 except ImportError:  # pragma: no cover
     import pickle
 
 
-class JaggedByMemMap(JaggedRawStore):
+class JaggedByMemMap(SegmentRawStorage):
     """Provides numpy arrays as views of an underlying memmapped array."""
 
-    def __init__(self, path=None, autoviews=True):
-        super(JaggedByMemMap, self).__init__(path)
+    def __init__(self, path=None, autoviews=True, contiguity=None):
+        super(JaggedByMemMap, self).__init__(path, contiguity=contiguity)
 
         if self._path is not None:
             ensure_dir(self._path)

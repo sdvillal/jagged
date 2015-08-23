@@ -4,13 +4,14 @@ import os.path as op
 import numpy as np
 import h5py
 
-from jagged.base import JaggedRawStore
+from jagged.base import SegmentRawStorage
 
 
-class JaggedByH5Py(JaggedRawStore):
+class JaggedByH5Py(SegmentRawStorage):
 
     def __init__(self,
                  path=None,
+                 contiguity=None,
                  # hdf params
                  dset_name='data',
                  chunklen=None,
@@ -18,7 +19,7 @@ class JaggedByH5Py(JaggedRawStore):
                  compression_opts=None,
                  shuffle=False,
                  checksum=False):
-        super(JaggedByH5Py, self).__init__(path)
+        super(JaggedByH5Py, self).__init__(path, contiguity=contiguity)
 
         self._dset_name = dset_name
 

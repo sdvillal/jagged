@@ -1,12 +1,12 @@
 # coding=utf-8
 import bcolz
 
-from jagged.base import JaggedRawStore
+from jagged.base import SegmentRawStorage
 from jagged.misc import ensure_dir
 from whatami import whatable
 
 
-class JaggedByCarray(JaggedRawStore):
+class JaggedByCarray(SegmentRawStorage):
     """
     A Jagged store that uses in-disk `bcolz.carray` to store the data.
 
@@ -38,12 +38,13 @@ class JaggedByCarray(JaggedRawStore):
 
     def __init__(self,
                  path=None,
+                 contiguity=None,
                  # bcolz params
                  expectedlen=None,
                  chunklen=1024 ** 2,
                  cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
 
-        super(JaggedByCarray, self).__init__(path)
+        super(JaggedByCarray, self).__init__(path, contiguity=contiguity)
 
         self.expectedlen = expectedlen
         self.chunklen = chunklen

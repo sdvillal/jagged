@@ -10,18 +10,29 @@ from jagged.base import JaggedSimpleIndex, JaggedStore
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.mmap_backend import JaggedByMemMap
+from jagged.npy_backend import JaggedByNPY
 
-RAW_STORES = (
+RAW_STORES = []
+
+SEGMENT_RAW_STORES = (
     ('jr=carray', JaggedByCarray),
-    ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
-    ('jr=h5py', JaggedByH5Py),
-    ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100)),
-    ('jr=mmap', JaggedByMemMap),
+    # ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
+    # ('jr=h5py', JaggedByH5Py),
+    # ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100)),
+    # ('jr=mmap', JaggedByMemMap),
 )
 
+for contiguity in ('read', 'write', None, 'auto'):
+    for name, store in SEGMENT_RAW_STORES:
+        RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
 
-@pytest.yield_fixture(params=[store for _, store in RAW_STORES],
-                      ids=[name for name, _ in RAW_STORES])
+RAW_STORES.append(('jr=npy', JaggedByNPY))
+
+stores = [store for _, store in RAW_STORES]
+names = [name for name, _ in RAW_STORES]
+
+
+@pytest.yield_fixture(params=stores, ids=names)
 def jagged_raw(request, tmpdir):
     jr = request.param
     dest = tmpdir.join(jr().what().id()).ensure_dir()
@@ -31,8 +42,7 @@ def jagged_raw(request, tmpdir):
         dest.remove(ignore_errors=True)
 
 
-@pytest.yield_fixture(params=(JaggedSimpleIndex,),
-                      ids=('idx=simple',))
+@pytest.yield_fixture(params=(JaggedSimpleIndex,), ids=('idx=simple',))
 def index(request, tmpdir):
     idx = request.param
     dest = tmpdir.join(idx().what().id()).ensure_dir()
@@ -42,8 +52,7 @@ def index(request, tmpdir):
         dest.remove(ignore_errors=True)
 
 
-@pytest.yield_fixture(params=(JaggedStore,),
-                      ids=('store=simple',))
+@pytest.yield_fixture(params=(JaggedStore,), ids=('store=simple',))
 def store(request, tmpdir):
     store = request.param
     dest = tmpdir.join('store').ensure_dir()
@@ -53,8 +62,7 @@ def store(request, tmpdir):
         dest.remove(ignore_errors=True)
 
 
-@pytest.fixture(params=(1, 2, 10),
-                ids=('ncol=1', 'ncol=2', 'ncol=10'))
+@pytest.fixture(params=(1, 2, 10), ids=('ncol=1', 'ncol=2', 'ncol=10'))
 def ncol(request):
     return request.param
 

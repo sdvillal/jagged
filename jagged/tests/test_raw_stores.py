@@ -1,7 +1,6 @@
 # coding=utf-8
 """Tests the raw storers."""
 from __future__ import print_function, absolute_import, unicode_literals
-from operator import itemgetter
 import os.path as op
 import bcolz
 from .fixtures import *
@@ -51,7 +50,7 @@ def test_lifecycle(jagged_raw):
 
 # -- Tests retrieve contiguous
 
-def test_retrieve_contiguous(mock_jagged_raw, contiguity, columns):
+def test_retrieve_contiguous(mock_jagged_raw, columns, contiguity):
 
     originals, ne, nc, dtype, segments, reader, rng = mock_jagged_raw
 
@@ -87,68 +86,74 @@ def test_retrieve_contiguous(mock_jagged_raw, contiguity, columns):
 
 # -- roundtrip tests
 
-def test_roundtrip(jagged_raw, dataset, columns, contiguity):
+def test_roundtrip(jagged_raw, dataset, columns):
     jagged_raw, path = jagged_raw
     jagged_raw = partial(jagged_raw, path=path)
     rng, originals, ncol = dataset
 
     # Write
-    segments = []
+    keys = []
     with jagged_raw() as jr:
         total = 0
         assert jr.dtype is None
         assert jr.shape is None
         for original in originals:
-            base, size = jr.append(original)
-            assert base == total
-            assert size == len(original)
+            key = jr.append(original)
             assert jr.is_writing
-            segments.append((base, size))
-            total += size
+            keys.append(key)
+            total += len(original)
             assert len(jr) == total
         assert jr.dtype == originals[0].dtype
-        assert jr.shape == (sum(map(itemgetter(1), segments)), ncol)
+        assert jr.shape == (total, ncol)
 
     # Read
-    def test_read(originals, segments):
+    def test_read(originals, keys):
 
         if columns is not None:
             originals = [o[:, columns] for o in originals]
 
         # test read, one by one
         with jagged_raw() as jr:
-            for original, segment in zip(originals, segments):
-                roundtripped = jr.get([segment], contiguity=contiguity, columns=columns)[0]
+            for original, key in zip(originals, keys):
+                roundtripped = jr.get([key], columns=columns)[0]
                 assert np.allclose(original, roundtripped)
 
         # test read, in a batch
         with jagged_raw() as jr:
-            for original, roundtripped in zip(originals, jr.get(segments, contiguity=contiguity, columns=columns)):
+            for original, roundtripped in zip(originals, jr.get(keys, columns=columns)):
                 assert np.allclose(original, roundtripped)
 
     # read all
     with jagged_raw() as jr:
         assert np.allclose(np.vstack(originals) if columns is None else np.vstack(originals)[:, columns],
-                           jr.get(contiguity=contiguity, columns=columns)[0])
+                           jr.get(columns=columns)[0])
 
     # read in insertion order
-    test_read(originals, segments)
+    test_read(originals, keys)
 
     # read in random order
-    or_s = list(zip(originals, segments))
+    or_s = list(zip(originals, keys))
     rng.shuffle(or_s)
-    originals, segments = zip(*or_s)
-    test_read(originals, segments)
+    originals, keys = zip(*or_s)
+    test_read(originals, keys)
 
 
 # --- Test self-identification
 
 def test_whatid():
-    assert "JaggedByCarray(chunklen=1000,cparams=cparams(clevel=3,cname='zlib',shuffle=False),expectedlen=None)" \
+    assert "JaggedByCarray(chunklen=1000," \
+           "contiguity=None," \
+           "cparams=cparams(clevel=3,cname='zlib',shuffle=False)," \
+           "expectedlen=None)" \
            == JaggedByCarray(chunklen=1000,
                              cparams=bcolz.cparams(clevel=3, cname='zlib', shuffle=False),
                              expectedlen=None).what().id()
-    assert "JaggedByH5Py(checksum=False,chunklen=1000,compression='lzf',compression_opts=0,shuffle=True)" \
+    assert "JaggedByH5Py(checksum=False," \
+           "chunklen=1000," \
+           "compression='lzf'," \
+           "compression_opts=0," \
+           "contiguity=None," \
+           "shuffle=True)" \
            == JaggedByH5Py(chunklen=1000,
                            compression='lzf',
                            compression_opts=0,
