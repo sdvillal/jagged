@@ -25,7 +25,7 @@ import numpy as np
 from jagged.misc import ensure_dir, subsegments, is_valid_segment
 from whatami import whatable
 
-try:  # pragma: no cover
+try:
     import cPickle as pickle
 except ImportError:  # pragma: no cover
     import pickle
@@ -106,7 +106,7 @@ class JaggedRawStore(object):
 
         Returns
         -------
-        A tuple (base, size) that addresses the appended data in the storage.
+        An id (usually a tuple) that addresses the appended data in the storage.
         """
 
         # at the moment we do not allow coordinate-less stores
@@ -125,16 +125,13 @@ class JaggedRawStore(object):
         self._open_write(data)
 
         # write
-        self._append_hook(data)
-
-        # return segment
-        return len(self) - len(data), len(data)
+        return self._append_hook(data)
 
     def _append_hook(self, data):
         raise NotImplementedError()
 
     def append_from(self, jagged, chunksize=None):
-        """Appends all the contens of `jagged`."""
+        """Appends all the contents of `jagged`."""
         if chunksize is None:
             self.append(jagged.get()[0])
         elif chunksize <= 0:
@@ -148,14 +145,14 @@ class JaggedRawStore(object):
     def _get_hook(self, base, size, columns, dest):
         raise NotImplementedError()
 
-    def get(self, segments=None, columns=None, factory=None, contiguity=None):
-        """Returns a list with the data specified in `segments` (and `columns`), possibly transformed by `factory`.
+    def get(self, keys=None, columns=None, factory=None, contiguity=None):
+        """Returns a list with the data specified in `keys` (and `columns`), possibly transformed by `factory`.
 
         Concrete implementations may warrant things like "all segments actually lie in congiguous regions in memory".
 
         Parameters
         ----------
-        segments : list of tuples (base, size)
+        keys : list keys as returned by append
           specifies which elements to retrieve; if None, the whole data is returned
 
         columns : list of integers, default None
@@ -167,7 +164,7 @@ class JaggedRawStore(object):
 
         contiguity : string or None, default None
            indicates the type of contiguity sought for the results; for performance segments retrieval
-           does not need to followdone in any order
+           does not need to be done in any order
              - 'read': a best effort should be done to leave retrieved segments order-contiguous in memory;
                        this can potentially speed up operations reading these data in the order specified by segments
              - 'write': a best effort should be done to write segments sequentially in memory;
@@ -197,12 +194,12 @@ class JaggedRawStore(object):
         self._open_read()
 
         # get one segment with all if segments is None
-        if segments is None:
-            segments = [(0, len(self))]
+        if keys is None:
+            keys = [(0, len(self))]
 
         # retrieve data
         ne, nc = self.shape
-        views = retrieve_contiguous(segments, columns, self._get_hook, self.dtype, ne, nc, contiguity)
+        views = retrieve_contiguous(keys, columns, self._get_hook, self.dtype, ne, nc, contiguity)
         return views if factory is None else map(factory, views)
 
     def iterchunks(self, chunksize):

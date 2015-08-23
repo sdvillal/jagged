@@ -74,6 +74,8 @@ class JaggedByCarray(JaggedRawStore):
 
     def _append_hook(self, data):
         self._bcolz.append(data)
+        return len(self) - len(data), len(data)
+
 
     # --- Read
 
