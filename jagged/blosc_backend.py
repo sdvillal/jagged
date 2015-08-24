@@ -48,7 +48,8 @@ class JaggedByBlosc(JaggedRawStore):
         return self._compressor
 
     def _append_bytes(self, compressed):
-        self._bytes_segments = None
+        self._bytes_segments = None  # FIXME: reading this is costly, should be stored binary and just updated on read
+                                     # Easy: use python array
         with open(op.join(self._path_or_fail(), 'bytes.csv'), 'a') as writer:
             writer.write('%d\n' % len(compressed))
 
