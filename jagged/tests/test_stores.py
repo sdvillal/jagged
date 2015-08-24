@@ -42,7 +42,7 @@ def test_store(store, keyed_dataset):
             assert np.allclose(original, got)
         # check shapes and the like
         assert js.shape == dset0stacked.shape
-        assert js.ndim == dset0stacked.ndim
+        assert js.ndims == dset0stacked.ndim
         assert js.dtype == dset0stacked.dtype
         assert len(js) == len(dset0stacked)
         # check meta-info
@@ -61,7 +61,7 @@ def test_store(store, keyed_dataset):
             assert np.allclose(original, got)
         # check shapes and the like
         assert js.shape == dset0stacked.shape
-        assert js.ndim == dset0stacked.ndim
+        assert js.ndims == dset0stacked.ndim
         assert js.dtype == dset0stacked.dtype
         assert len(js) == len(dset0stacked)
         # check meta-info
@@ -85,7 +85,7 @@ def test_store(store, keyed_dataset):
             assert np.allclose(original, got)
         # check shapes and the like
         assert js.shape == dsetstacked.shape
-        assert js.ndim == dsetstacked.ndim
+        assert js.ndims == dsetstacked.ndim
         assert js.dtype == dsetstacked.dtype
         assert len(js) == len(dsetstacked)
         # check meta-info

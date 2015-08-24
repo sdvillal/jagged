@@ -23,9 +23,6 @@ class JaggedByMemMap(LinearRawStorage):
             self._mmpath = op.join(self._path, 'data.mm')
 
         self._mm = None  # numpy memmap for reading / file handler for writing
-        self._dtype = None
-        self._shape = None
-        self._order = None
 
         self.autoviews = autoviews
 
@@ -35,7 +32,7 @@ class JaggedByMemMap(LinearRawStorage):
         self._read_meta()
         if self._mm is None:
             self._mm = np.memmap(self._mmpath,
-                                 dtype=self._dtype, shape=self._shape, order=self._order,
+                                 dtype=self.dtype, shape=self.shape, order=self.order,
                                  mode='r')
 
     def _get_hook(self, base, size, columns, dest):
@@ -50,22 +47,10 @@ class JaggedByMemMap(LinearRawStorage):
     # --- Write
 
     def _open_write(self, data=None):
-        if not op.isfile(self._meta):
-            if data is None:  # pragma: no cover
-                raise ValueError('data must not be None when bootstrapping storage')
-            self._dtype = data.dtype
-            self._order = 'F' if np.isfortran(data) else 'C'
-            self._shape = (0, data.shape[1])
-            self._write_meta()
-        self._read_meta()
         self._mm = open(self._mmpath, mode='a')
 
     def _append_hook(self, data):
-        base = len(self)
-        size = len(data)
         self._mm.buffer.write(data.data) if PY3 else self._mm.write(str(data.data))
-        self._shape = self._shape[0] + size, self._shape[1]
-        return base, size
 
     # --- Lifecycle
 
@@ -85,7 +70,6 @@ class JaggedByMemMap(LinearRawStorage):
         if self.is_writing:
             self._mm.close()
         self._mm = None
-        self._write_meta()
 
     # --- Storage for underlying array shape, dtype, row/column order
 
@@ -98,7 +82,7 @@ class JaggedByMemMap(LinearRawStorage):
         return num_rows, leftovers
 
     def _check_sizes(self):
-        if op.isfile(self._mmpath) and self._shape is not None:
+        if op.isfile(self._mmpath) and self.shape is not None:
             num_rows, leftovers = self._len_by_filelen()
             if 0 != leftovers:
                 raise Exception('the memmap file has incomplete data '
@@ -109,38 +93,9 @@ class JaggedByMemMap(LinearRawStorage):
                                 'does not coincide with the length of the store '
                                 '(%d != %d)' % (num_rows, self.shape[0]))
 
-    def _write_meta(self):
-        """Writes the information about the array."""
-        if self._dtype is not None:
-            with open(self._meta, 'wb') as writer:
-                pickle.dump((self._dtype, self._shape, self._order), writer, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def _read_meta(self):
-        """Reads the information about the array."""
-        if self._dtype is None and op.isfile(self._meta):
-            with open(self._meta, 'rb') as reader:
-                self._dtype, self._shape, self._order = pickle.load(reader)
-            self._check_sizes()
-
-    # --- Properties
-
-    def _backend_attr_hook(self, attr):
-        self._read_meta()
-        if attr == 'dtype':
-            return self._dtype
-        if attr == 'shape':
-            return self._shape
-        raise ValueError('Unknown attribute %s' % attr)  # pragma: no cover
-
-#
-# TODO: growing length can be easily inferred from file size, no need to update _shape
-#       what is best? Probably file size allows for more robust reentrancy...
 #
 # Remember that resize for numpy mmap objects never resize the file under the hood.
-# Fortunately we do not need it here, but was bitten by it when trying to be too clever
 # Numpy mmap ndarray subclass code is simple and neat, can be read in no time. Get back there.
 #
-# Document that when using mode 'auto', everything returned is a view to the large
-# memmapped array. TEST that there is no much memory leaking going on. Document that
-# for this to work well we need 64bits, python >= 2.6
+# Document that when using mode 'auto', everything returned is a view to the large memmapped array.
 #

@@ -55,16 +55,13 @@ def _read_full_file(x, path):
 
 
 class JaggedJournal(object):
-    """Keeps track and persists needed details about the added arrays to a jagged instance."""
+    """Keeps track and persists information about the sizes of added arrays."""
 
     # a journal must be instantiated only when jagged knows its location
     # a journal can be shared by many jagged instances (e.g. when storing different columns by different jaggeds)
 
-    def __init__(self, jagged, path=None):
+    def __init__(self, path):
         super(JaggedJournal, self).__init__()
-        self.jagged = jagged
-        if path is None:
-            path = op.join(jagged.path_or_fail(), 'journal')
         self._path = path
         # base and length of each added array
         self._lengths_file = op.join(self._path, 'lengths.array')
@@ -72,17 +69,17 @@ class JaggedJournal(object):
         self._bases = None
         # total number of rows and arrays
         self._sizes_file = op.join(self._path, 'size.json')
-        self._numrows = None
-        self._numarrays = None
-        self._read_sizes()
+        self._numrows, self._numarrays = self._read_sizes()
 
-    def added(self, data):
-        """Informs of a new added array."""
+    def append(self, data):
+        """Appends the data array to the journal."""
         self._add_length(data)
         self._add_sizes(data)
 
+    # --- Num rows, num arrays (redundant with lengths, light and good for redundancy)
+
     def _add_sizes(self, data):
-        """Writes the current numrows and numarrays values to persistent storage."""
+        """Adds to numrows and numarrays the sizes of the array data and immediatly persists them."""
         self._numrows += len(data)
         self._numarrays += 1
         with open(self._sizes_file, 'w') as writer:
@@ -96,11 +93,8 @@ class JaggedJournal(object):
         if op.isfile(self._sizes_file):
             with open(op.join(self._sizes_file, 'sizes.json'), 'r') as reader:
                 sizes = json.load(reader)
-                self._numrows = _int_or_0(sizes['numrows'])
-                self._numarrays = _int_or_0(sizes['numarrays'])
-        else:
-            self._numrows = 0
-            self._numarrays = 0
+                return _int_or_0(sizes['numrows']), _int_or_0(sizes['numarrays'])
+        return 0, 0
 
     def numrows(self):
         """Returns the total number of rows in the jagged instance."""
@@ -110,42 +104,60 @@ class JaggedJournal(object):
         """Returns the number of arrays in the jagged instance."""
         return self._numarrays
 
+    # --- Base and size of each array
+
+    def _add_length(self, data):
+        """Adds the length to the journal and immediatly persists it."""
+        self._lengths.append(len(data))
+        with open(self._lengths_file, 'ab') as writer:
+            array[-1:].tofile(writer)
+
     def _read_lengths(self):
+        """Reads the lengths from persistent storage, if it does not exist, returns an empty array."""
         lengths = array(b'l')
         if op.isfile(self._lengths_file):
             _read_full_file(lengths, self._lengths_file)
         return lengths
 
-    def _add_length(self, data):
-        self._lengths.append(len(data))
-        with open(self._lengths_file, 'ab') as writer:
-            array[-1:].tofile(writer)
-
     def lengths(self):
+        """Returns an array with the length of each array added to the journal."""
         return self._read_lengths()
 
     def bases(self):
+        """Returns where each array would start if the storage is linear."""
         if self._bases is None or len(self._bases) < len(self._lengths):
             self._bases = np.hstack(([0], np.cumsum(self._lengths)))
         return self._bases
+
+    def start_end(self, index):
+        """Returns the start and end of the array at index."""
+        base, size = self.base_size(index)
+        return base, base + size
+
+    def base_size(self, index):
+        """Returns the base and size of the array at index."""
+        return self.bases()[index], self.lengths()[index]
+
+    # --- Sanity checks
+
+    def check_consistency(self):
+        """Checks the internal consistency of the journal."""
+        assert len(self.lengths()) == len(self.bases())
+        assert len(self.lengths()) == self.numarrays()
+        assert len(np.sum(self.lengths())) == self.numrows()
 
 
 @whatable(add_properties=False)
 class JaggedRawStore(object):
     """Persistent storage of objects of the same type but different length."""
 
-    def __init__(self, path):
+    def __init__(self, path, journal=None):
         super(JaggedRawStore, self).__init__()
         self._path = path
         if self._path is not None:
             ensure_dir(self._path)
-        self._template = None   # how the saved arrays look like
-        self._journal = None
-
-    def journal(self):
-        if self._journal is None:
-            self._journal = JaggedJournal(self)
-        return self._journal
+        self._template = None    # how the saved arrays look like
+        self._journal = journal  # sizes of the added arrays
 
     # --- Where this storage resides
 
@@ -154,6 +166,13 @@ class JaggedRawStore(object):
         if self._path is None:
             raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
         return self._path
+
+    # --- Journal
+
+    def journal(self):
+        if self._journal is None:
+            self._journal = JaggedJournal(op.join(self.path_or_fail(), 'journal'))
+        return self._journal
 
     # --- Template
 
@@ -168,7 +187,7 @@ class JaggedRawStore(object):
         template_path = op.join(self.path_or_fail(), 'template.npy')
         np.save(template_path, data[:0])
 
-    def is_compatible(self, data):
+    def can_add(self, data):
         """Returns True iff data can be stored.
         This usually means it is of the same kind as previously stored arrays.
         """
@@ -231,7 +250,7 @@ class JaggedRawStore(object):
 
         Returns
         -------
-        An id (usually a tuple) that addresses the appended data in the storage.
+        An integer addressing the added array in the storage
         """
 
         # at the moment we do not allow coordinate-less stores
@@ -249,19 +268,32 @@ class JaggedRawStore(object):
         # template
         if self.template() is None:
             self._write_template(data)
-        assert self.is_compatible(data)
+        assert self.can_add(data)
 
         # open
         self._open_write(data)
 
         # write
-        coords = self._append_hook(data)
+        self._append_hook(data)
 
-        # bookkeping
-        self._journal.added(data)
+        # bookkeeping
+        index = self.journal().numarrays()
+        self.journal().append(data)
 
         # done
-        return coords
+        return index
+
+    def _append_hook(self, data):
+        """Saves the data, returns nothing."""
+        raise NotImplementedError()
+
+    def append_from(self, jagged, chunksize=None):
+        """Appends all the contents of `jagged`."""
+        for chunk in jagged.iter_segments(chunksize):
+            for data in chunk:
+                self.append(data)
+
+    # -- Iteration
 
     def iter_segments(self, segments_per_chunk=None):
         if segments_per_chunk is None:
@@ -280,15 +312,6 @@ class JaggedRawStore(object):
         # Useful to iterate with really controlled amount of memory
         raise NotImplementedError()
 
-    def _append_hook(self, data):
-        raise NotImplementedError()
-
-    def append_from(self, jagged, chunksize=None):
-        """Appends all the contents of `jagged`."""
-        for chunk in jagged.iter_segments(chunksize):
-            for data in chunk:
-                self.append(data)
-
     # --- Reading data
 
     def _open_read(self):
@@ -306,8 +329,8 @@ class JaggedRawStore(object):
 
         Parameters
         ----------
-        keys : list keys as returned by append
-          specifies which elements to retrieve; if None, the whole data is returned
+        keys : list of keys
+          specifies which elements to retrieve; if None, all arrays are returned
 
         columns : list of integers, default None
           specifies which columns to retrieve; if None, retrieve all columns
@@ -352,43 +375,44 @@ class JaggedRawStore(object):
         """
         return whatable(partial(self.__class__, **merge(self.what().conf, params)), add_properties=False)
 
-    # --- Shape and dtype
-
-    def _backend_attr(self, attr):
-        # TODO: probably this can be simplified:
-        #  - removed in favor of _backend_attr_hook
-        #  - remove reimplementations in subclasses
-        if not self.is_open:
-            with self:
-                try:
-                    self._open_read()
-                    return self._backend_attr_hook(attr)
-                except IOError:
-                    return None
-        return self._backend_attr_hook(attr)
-
-    def _backend_attr_hook(self, attr):
-        if self.template() is None:
-            return None
-        if attr == 'shape':
-            return self._read_numrows(), self.template().shape[1]
-        return getattr(self.template(), attr)
+    # --- shape, dtype, order
 
     @property
     def shape(self):
         """Returns a tuple with the current size of the storage in each dimension."""
-        return self._backend_attr('shape')
+        ncol = self.ncols
+        return None if ncol is None else (self.nrows, ncol)
 
     @property
     def dtype(self):
         """Returns the data type of the store."""
-        return self._backend_attr('dtype')
+        template = self.template()
+        return None if template is None else template.dtype
 
     @property
-    def ndim(self):
+    def ndims(self):
         """Returns the number of dimensions."""
+        # Actually at the moment we only support ndims == 2
         shape = self.shape
         return len(self.shape) if shape is not None else None
+
+    @property
+    def ncols(self):
+        """Returns the number of columns."""
+        template = self.template()
+        return None if template is None else template.shape[1]
+
+    @property
+    def nrows(self):
+        """Returns the number of rows in the jagged instance."""
+        return self.journal().numrows()
+
+    @property
+    def order(self):
+        template = self.template()
+        if template is None:
+            return None
+        return 'F' if np.isfortran(template) else 'C'
 
     # --- Context manager and other magics...
 
@@ -402,7 +426,7 @@ class JaggedRawStore(object):
         """Returns the size of the leading dimension."""
         return self.shape[0] if self.shape is not None else 0
 
-    # Also consider register to atexit
+    # Also consider register to atexit as a parameter to the constructor
 
 
 class LinearRawStorage(JaggedRawStore):
@@ -434,9 +458,10 @@ class LinearRawStorage(JaggedRawStore):
         self.contiguity = contiguity
 
     def _get_views(self, keys, columns):
-        # get one segment with all if segments is None
+        # get all segments if segments is None
         if keys is None:
-            keys = [(0, len(self))]
+            keys = range(self.journal().numarrays())
+        keys = [self.journal().base_size(key) if isinstance(key, int) else key for key in keys]
 
         # retrieve data
         ne, nc = self.shape
@@ -782,7 +807,7 @@ class JaggedStore(object):
 
     @property
     def ndim(self):
-        return self._jagged.ndim
+        return self._jagged.ndims
 
     @property
     def dtype(self):

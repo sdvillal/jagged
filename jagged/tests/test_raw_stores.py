@@ -18,14 +18,14 @@ def test_lifecycle(jagged_raw):
     with jagged_raw(path=path) as jr:
         # before writing, everything is unknown
         assert jr.shape is None
-        assert jr.ndim is None
+        assert jr.ndims is None
         assert jr.dtype is None
         # first write-up
         jr.append(data0)
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
-        assert jr.ndim == data0.ndim
-        assert jr.read_segments() == [(0, len(data0))]
+        assert jr.ndims == data0.ndim
+        assert jr.bases() == [(0, len(data0))]
         # first read
         assert np.allclose(data0, jr.get()[0])
         # even if we close it...
@@ -33,19 +33,19 @@ def test_lifecycle(jagged_raw):
         # we can now know shapes and the like
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
-        assert jr.ndim == data0.ndim
+        assert jr.ndims == data0.ndim
         # we can reread...
         assert np.allclose(data0, jr.get()[0])
         # we can know shapes and the like
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
-        assert jr.ndim == data0.ndim
+        assert jr.ndims == data0.ndim
         # we can append more
         jr.append(data1)
         assert jr.shape == expected.shape
         assert jr.dtype == expected.dtype
-        assert jr.ndim == expected.ndim
-        assert jr.read_segments() == [(0, len(data0)), (len(data0), len(data1))]
+        assert jr.ndims == expected.ndim
+        assert jr.bases() == [(0, len(data0)), (len(data0), len(data1))]
         # and the data will be properlly appended
         assert np.allclose(expected, jr.get()[0])
 

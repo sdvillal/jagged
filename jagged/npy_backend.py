@@ -41,10 +41,6 @@ class JaggedByNPY(JaggedRawStore):
         self._writing = True
 
     def _append_hook(self, data):
-        self._write_one(data)
-        return self._read_numarrays()
-
-    def _write_one(self, data):
         np.save(self._dest_file(self._read_numarrays()), data)
 
     # --- Read

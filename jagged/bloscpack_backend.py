@@ -34,7 +34,7 @@ class JaggedByBloscpack(JaggedByNPY):
     def _read_one(self, key):
         return unpack_ndarray_file(self._dest_file(key))
 
-    def _write_one(self, data):
+    def _append_hook(self, data):
         if self._bp_args is None:
             self._bp_args = bloscpack.BloscpackArgs(offsets=self.offsets,
                                                     checksum=self.checksum)
