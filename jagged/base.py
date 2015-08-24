@@ -113,7 +113,12 @@ class JaggedRawStore(object):
         if self._path is not None:
             ensure_dir(self._path)
         self._template = None   # how the saved arrays look like
-        self._journal = JaggedJournal(self)
+        self._journal = None
+
+    def journal(self):
+        if self._journal is None:
+            self._journal = JaggedJournal(self)
+        return self._journal
 
     # --- Where this storage resides
 
