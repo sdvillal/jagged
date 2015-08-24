@@ -57,7 +57,7 @@ class JaggedByCarray(LinearRawStorage):
             try:  # append
                 self._bcolz = \
                     bcolz.carray(None,
-                                 rootdir=self._path_or_fail(),
+                                 rootdir=self.path_or_fail(),
                                  mode='a',
                                  # bcolz conf in case mode='a' semantics change to create, otherwise innocuous
                                  chunklen=self.chunklen,
@@ -66,7 +66,7 @@ class JaggedByCarray(LinearRawStorage):
             except:  # create
                 self._bcolz = \
                     bcolz.carray(data[0:0],
-                                 rootdir=self._path_or_fail(),
+                                 rootdir=self.path_or_fail(),
                                  mode='w',
                                  chunklen=self.chunklen,
                                  expectedlen=self.expectedlen,
@@ -80,7 +80,7 @@ class JaggedByCarray(LinearRawStorage):
 
     def _open_read(self):
         if self._bcolz is None:
-            self._bcolz = bcolz.carray(None, rootdir=self._path_or_fail(), mode='r')
+            self._bcolz = bcolz.carray(None, rootdir=self.path_or_fail(), mode='r')
 
     def _get_hook(self, base, size, columns, dest):
         if dest is not None and columns is None:

@@ -51,12 +51,12 @@ class JaggedByBlosc(JaggedRawStore):
         # FIXME: reading this is costly, should be stored binary and just updated on read
         # Easy: use python array
         self._bytes_segments = None
-        with open(op.join(self._path_or_fail(), 'bytes.csv'), 'a') as writer:
+        with open(op.join(self.path_or_fail(), 'bytes.csv'), 'a') as writer:
             writer.write('%d\n' % len(compressed))
 
     def _read_bytes_segments(self):
         if self._bytes_segments is None:
-            sizes = np.atleast_1d(np.loadtxt(op.join(self._path_or_fail(), 'bytes.csv'), dtype=int))
+            sizes = np.atleast_1d(np.loadtxt(op.join(self.path_or_fail(), 'bytes.csv'), dtype=int))
             bases = np.hstack(([0], np.cumsum(sizes)))
             self._bytes_segments = list(zip(bases, sizes))
         return self._bytes_segments
@@ -69,12 +69,12 @@ class JaggedByBlosc(JaggedRawStore):
         return self._read_numarrays()
 
     def _open_read(self):
-        self._handle = open(op.join(self._path_or_fail(), 'data'), 'r')
+        self._handle = open(op.join(self.path_or_fail(), 'data'), 'r')
         self._handle = mmap(self._handle.fileno(), 0, access=ACCESS_READ)
         self._writing = False
 
     def _open_write(self, data=None):
-        self._handle = open(op.join(self._path_or_fail(), 'data'), 'ab')
+        self._handle = open(op.join(self.path_or_fail(), 'data'), 'ab')
         self._writing = True
 
     def iter_segments(self, segments_per_chunk=None):  # copied verbatim from NPY, factorise

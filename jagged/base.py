@@ -33,6 +33,76 @@ except ImportError:  # pragma: no cover
 
 # --- Raw stores
 
+class JaggedJournal(object):
+    """Keeps track and persists needed details about the added arrays to a jagged instance."""
+
+    def __init__(self, jagged):
+        super(JaggedJournal, self).__init__()
+        self.jagged = jagged
+        self._path = op.join(jagged.path_or_fail(), 'journal')
+        self._numarrays = None  # total number of arrays
+        self._numrows = None    # total number or rows
+        self._sizes = None      # lenght of each added array
+        self._segments = None   # list of (base, size) segments
+
+    def added(self, data):
+        """Informs of a new added array."""
+        self._write_numarrays()
+        self._sizes.append(len(data))
+        self._save_segment_info(data)
+
+        if self._numrows is None:
+            self._numrows = len(data)
+        else:
+            self._numrows += len(data)
+        self._write_numrows()
+
+        if self._numarrays is None:
+            self._numarrays = 1
+        else:
+            self._numarrays += 1
+        self._write_numarrays()
+
+    def _read_numrows(self):
+        if self._numrows is None:
+            if op.isfile(op.join(self._path, 'numrows.txt')):
+                with open(op.join(self.jagged.path_or_fail(), 'numrows.txt')) as reader:
+                    self._numrows = int(reader.read())
+            else:
+                return 0
+        return self._numrows
+
+    def _write_numrows(self):
+        if self._numrows is not None:
+            with open(op.join(self.jagged.path_or_fail(), 'size.txt'), 'w') as writer:
+                writer.write(str('%d' % self._numrows))
+
+    def numarrays(self):
+        """Returns the number of arrays in the jagged instance."""
+        if self._numarrays is None:
+            if op.isfile(op.join(self.jagged.path_or_fail(), 'numarrays.txt')):
+                with open(op.join(self.jagged.path_or_fail(), 'numarrays.txt'), 'r') as reader:
+                    self._numarrays = int(reader.read())
+            else:
+                self._numarrays = 0
+                self._write_numarrays()
+        return self._numarrays
+
+    def _write_numarrays(self):
+        if self._numarrays is not None:
+            with open(op.join(self.jagged.path_or_fail(), 'numarrays.txt'), 'w') as writer:
+                writer.write(str('%d' % self._numarrays))
+
+    def _save_segment_info(self, data):
+        with open(op.join(self.jagged.path_or_fail(), 'segment_sizes.csv'), 'a') as writer:
+            writer.write(str('%d\n' % len(data)))
+
+    def read_segments(self):
+        sizes = np.atleast_1d(np.loadtxt(op.join(self.jagged.path_or_fail(), 'segment_sizes.csv'), dtype=int))
+        bases = np.hstack(([0], np.cumsum(sizes)))
+        return list(zip(bases, sizes))
+
+
 @whatable(add_properties=False)
 class JaggedRawStore(object):
     """Persistent storage of objects of the same type but different length."""
@@ -43,14 +113,11 @@ class JaggedRawStore(object):
         if self._path is not None:
             ensure_dir(self._path)
         self._template = None   # how the saved arrays look like
-        self._numarrays = None  # total number of arrays
-        self._numrows = None    # total number or rows
-        self._sizes = None      # lenght of each added array
-        self._segments = None   # list of (base, size) segments
+        self._journal = JaggedJournal(self)
 
     # --- Where this storage resides
 
-    def _path_or_fail(self):
+    def path_or_fail(self):
         """Returns the path if set, otherwise raises an exception."""
         if self._path is None:
             raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
@@ -59,14 +126,14 @@ class JaggedRawStore(object):
     # --- Template
 
     def _read_template(self):
-        template_path = op.join(self._path_or_fail(), 'template.npy')
+        template_path = op.join(self.path_or_fail(), 'template.npy')
         if self._template is None:
             if op.isfile(template_path):
                 self._template = np.load(template_path)
         return self._template
 
     def _write_template(self, data):
-        template_path = op.join(self._path_or_fail(), 'template.npy')
+        template_path = op.join(self.path_or_fail(), 'template.npy')
         np.save(template_path, data[:0])
 
     def is_compatible(self, data):
@@ -82,41 +149,12 @@ class JaggedRawStore(object):
                 data.shape[-1] == template.shape[-1] and
                 np.isfortran(data) == np.isfortran(data))
 
-    def _read_numarrays(self):
-        if self._numarrays is None:
-            if op.isfile(op.join(self._path_or_fail(), 'numarrays.txt')):
-                with open(op.join(self._path_or_fail(), 'numarrays.txt'), 'r') as reader:
-                    self._numarrays = int(reader.read())
-            else:
-                self._numarrays = 0
-                self._write_numarrays()
-        return self._numarrays
-
-    def _write_numarrays(self):
-        if self._numarrays is not None:
-            with open(op.join(self._path_or_fail(), 'numarrays.txt'), 'w') as writer:
-                writer.write('%d' % self._numarrays)
-
     # --- Lifecycle
 
     # N.B. at the moment, to make things simple, we only want write or read
     # We should ensure concurrency does not break this rule (only one writer xor many readers)
     # Of course we could use stuff like SWMR from hdf5 or role our own, more featureful and compled concurrency
     # Not a priority
-
-    def _open_read(self):
-        """Opens in reading mode, returns None."""
-        raise NotImplementedError()
-
-    def _open_write(self, data=None):
-        """Opens in writing mode, returns None.
-
-        Parameters
-        ----------
-        data : numpy array like, default None
-          data schema to use by the storage, needed if this is the first opening of the repository
-        """
-        raise NotImplementedError()
 
     @property
     def is_writing(self):
@@ -133,17 +171,21 @@ class JaggedRawStore(object):
         """Returns whether we are currently open in any mode."""
         raise NotImplementedError()
 
-    def consolidate(self):
-        """Perform post-append optimisations, possibly disabling writing."""
-        return self  # pragma: no cover
-
-    # Maybe requiring flush is worth, although I like to force using the context manager...
-
     def close(self):
         """Flushes buffers to permanent storage and closes the underlying backend."""
         raise NotImplementedError()
 
     # --- Writing data
+
+    def _open_write(self, data=None):
+        """Opens in writing mode, returns None.
+
+        Parameters
+        ----------
+        data : numpy array like, default None
+          data schema to use by the storage, needed if this is the first opening of the repository
+        """
+        raise NotImplementedError()
 
     def append(self, data):
         """Appends new data to this storage.
@@ -161,7 +203,7 @@ class JaggedRawStore(object):
         """
 
         # at the moment we do not allow coordinate-less stores
-        self._path_or_fail()
+        self.path_or_fail()
 
         # check data validity
         if any(s < 1 for s in data.shape[1:]):
@@ -184,32 +226,10 @@ class JaggedRawStore(object):
         coords = self._append_hook(data)
 
         # bookkeping
-        self._save_segment_info(data)
-
-        if self._numrows is None:
-            self._numrows = len(data)
-        else:
-            self._numrows += len(data)
-        self._write_numrows()
-
-        # TODO: quick and dirty, revisit and simplify
-        if self._numarrays is None:
-            self._numarrays = 1
-        else:
-            self._numarrays += 1
-        self._write_numarrays()
+        self._journal.added(data)
 
         # done
         return coords
-
-    def _save_segment_info(self, data):
-        with open(op.join(self._path_or_fail(), 'segment_sizes.csv'), 'a') as writer:
-            writer.write('%d\n' % len(data))
-
-    def read_segments(self):
-        sizes = np.atleast_1d(np.loadtxt(op.join(self._path_or_fail(), 'segment_sizes.csv'), dtype=int))
-        bases = np.hstack(([0], np.cumsum(sizes)))
-        return list(zip(bases, sizes))
 
     def iter_segments(self, segments_per_chunk=None):
         if segments_per_chunk is None:
@@ -239,7 +259,12 @@ class JaggedRawStore(object):
 
     # --- Reading data
 
+    def _open_read(self):
+        """Opens in reading mode, returns None."""
+        raise NotImplementedError()
+
     def _get_views(self, keys, columns):
+        """Returns a list of arrays corresponding to the provided keys and columns."""
         raise NotImplementedError()
 
     def get(self, keys=None, columns=None, factory=None):
@@ -265,7 +290,7 @@ class JaggedRawStore(object):
         """
 
         # at the moment we do not allow coordinate-less stores
-        self._path_or_fail()
+        self.path_or_fail()
 
         # flush if needed
         if self.is_writing and not self.is_reading:
@@ -296,20 +321,6 @@ class JaggedRawStore(object):
         return whatable(partial(self.__class__, **merge(self.what().conf, params)), add_properties=False)
 
     # --- Shape and dtype
-
-    def _read_numrows(self):
-        if self._numrows is None:
-            if op.isfile(op.join(self._path_or_fail(), 'size.txt')):
-                with open(op.join(self._path_or_fail(), 'size.txt')) as reader:
-                    self._numrows = int(reader.read())
-            else:
-                return 0
-        return self._numrows
-
-    def _write_numrows(self):
-        if self._numrows is not None:
-            with open(op.join(self._path_or_fail(), 'size.txt'), 'w') as writer:
-                writer.write('%d' % self._numrows)
 
     def _backend_attr(self, attr):
         # TODO: probably this can be simplified:

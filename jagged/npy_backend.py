@@ -22,7 +22,7 @@ class JaggedByNPY(JaggedRawStore):
 
     def _all_shards(self):
         if self._shards is None:
-            self._shards = [ensure_dir(op.join(self._path_or_fail(), str(shard))) for shard in range(256)]
+            self._shards = [ensure_dir(op.join(self.path_or_fail(), str(shard))) for shard in range(256)]
         return self._shards
         # random note, 256 is the last cached int in cpython
 
