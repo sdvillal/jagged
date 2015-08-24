@@ -5,7 +5,6 @@ import os.path as op
 from future.utils import PY3
 import numpy as np
 from jagged.base import LinearRawStorage
-from jagged.misc import ensure_dir
 
 try:
     import cPickle as pickle
@@ -20,7 +19,6 @@ class JaggedByMemMap(LinearRawStorage):
         super(JaggedByMemMap, self).__init__(path, contiguity=contiguity)
 
         if self._path is not None:
-            ensure_dir(self._path)
             self._meta = op.join(self._path, 'meta.pkl')
             self._mmpath = op.join(self._path, 'data.mm')
 

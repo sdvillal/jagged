@@ -40,14 +40,21 @@ class JaggedRawStore(object):
     def __init__(self, path):
         super(JaggedRawStore, self).__init__()
         self._path = path
+        if self._path is not None:
+            ensure_dir(self._path)
         self._template = None   # how the saved arrays look like
         self._numarrays = None  # total number of arrays
         self._numrows = None    # total number or rows
+        self._sizes = None      # lenght of each added array
+        self._segments = None   # list of (base, size) segments
+
+    # --- Where this storage resides
 
     def _path_or_fail(self):
+        """Returns the path if set, otherwise raises an exception."""
         if self._path is None:
             raise Exception('In-memory only arrays are not implemented for %s.' % self.what().id())
-        return ensure_dir(self._path)
+        return self._path
 
     # --- Template
 
@@ -63,14 +70,17 @@ class JaggedRawStore(object):
         np.save(template_path, data[:0])
 
     def is_compatible(self, data):
+        """Returns True iff data can be stored.
+        This usually means it is of the same kind as previously stored arrays.
+        """
+        # Obviously we could just store arbitrary arrays in some implementations (e.g. NPY)
+        # But lets keep jagged contracts...
         template = self._read_template()
         if template is None:
             return True
         return (template.dtype >= data.dtype and
                 data.shape[-1] == template.shape[-1] and
                 np.isfortran(data) == np.isfortran(data))
-        # Obviously we could just store arbitrary arrays in some implementations
-        # But lets keep jagged contracts...
 
     def _read_numarrays(self):
         if self._numarrays is None:

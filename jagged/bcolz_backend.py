@@ -1,9 +1,8 @@
 # coding=utf-8
-import bcolz
 
-from jagged.base import LinearRawStorage
-from jagged.misc import ensure_dir
+import bcolz
 from whatami import whatable
+from .base import LinearRawStorage
 
 
 class JaggedByCarray(LinearRawStorage):
@@ -58,7 +57,7 @@ class JaggedByCarray(LinearRawStorage):
             try:  # append
                 self._bcolz = \
                     bcolz.carray(None,
-                                 rootdir=ensure_dir(self._path_or_fail()),
+                                 rootdir=self._path_or_fail(),
                                  mode='a',
                                  # bcolz conf in case mode='a' semantics change to create, otherwise innocuous
                                  chunklen=self.chunklen,
@@ -67,7 +66,7 @@ class JaggedByCarray(LinearRawStorage):
             except:  # create
                 self._bcolz = \
                     bcolz.carray(data[0:0],
-                                 rootdir=ensure_dir(self._path_or_fail()),
+                                 rootdir=self._path_or_fail(),
                                  mode='w',
                                  chunklen=self.chunklen,
                                  expectedlen=self.expectedlen,
