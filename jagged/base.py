@@ -36,19 +36,25 @@ except ImportError:  # pragma: no cover
 class JaggedJournal(object):
     """Keeps track and persists needed details about the added arrays to a jagged instance."""
 
-    def __init__(self, jagged):
+    def __init__(self, jagged, path=None):
         super(JaggedJournal, self).__init__()
+        # the (master) jagged instance
         self.jagged = jagged
-        self._path = op.join(jagged.path_or_fail(), 'journal')
-        self._numarrays = None  # total number of arrays
-        self._numrows = None    # total number or rows
-        self._sizes = None      # lenght of each added array
-        self._segments = None   # list of (base, size) segments
+        # a journal must be instantiated only when jagged knows its location
+        # a journal can be shared by many jagged instances (e.g. when storing different columns by different jaggeds)
+        if path is None:
+            path = op.join(jagged.path_or_fail(), 'journal')
+        self._path = path
+        # keeped info, essentially counts of arrays and rows
+        self._numarrays = None   # total number of arrays
+        self._lengths = None     # lenght of each added array
+        self._numrows = None     # total number or rows (sum of self._lengths)
+        self._segments = None    # list of (base, size) segments (inferred from self._lengths)
 
     def added(self, data):
         """Informs of a new added array."""
         self._write_numarrays()
-        self._sizes.append(len(data))
+        self._lengths.append(len(data))
         self._save_segment_info(data)
 
         if self._numrows is None:
@@ -130,7 +136,7 @@ class JaggedRawStore(object):
 
     # --- Template
 
-    def _read_template(self):
+    def template(self):
         template_path = op.join(self.path_or_fail(), 'template.npy')
         if self._template is None:
             if op.isfile(template_path):
@@ -147,7 +153,7 @@ class JaggedRawStore(object):
         """
         # Obviously we could just store arbitrary arrays in some implementations (e.g. NPY)
         # But lets keep jagged contracts...
-        template = self._read_template()
+        template = self.template()
         if template is None:
             return True
         return (template.dtype >= data.dtype and
@@ -220,7 +226,7 @@ class JaggedRawStore(object):
             self.close()
 
         # template
-        if self._read_template() is None:
+        if self.template() is None:
             self._write_template(data)
         assert self.is_compatible(data)
 
@@ -341,11 +347,11 @@ class JaggedRawStore(object):
         return self._backend_attr_hook(attr)
 
     def _backend_attr_hook(self, attr):
-        if self._read_template() is None:
+        if self.template() is None:
             return None
         if attr == 'shape':
-            return self._read_numrows(), self._read_template().shape[1]
-        return getattr(self._read_template(), attr)
+            return self._read_numrows(), self.template().shape[1]
+        return getattr(self.template(), attr)
 
     @property
     def shape(self):

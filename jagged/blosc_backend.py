@@ -38,7 +38,7 @@ class JaggedByBlosc(JaggedRawStore):
 
     def _make_compressor(self):
         if self._compressor is None:
-            template = self._read_template()
+            template = self.template()
             shape = template.shape
             dtype = template.dtype
             order = ('F' if np.isfortran(template) else 'C')
