@@ -15,6 +15,7 @@ All these classes are `whatable`.
    Retrieve only by contiguous blocks (i.e. no explicit support for slice notation)
 """
 from __future__ import absolute_import, unicode_literals, print_function
+from array import array
 from functools import partial
 import os.path as op
 from operator import itemgetter
@@ -41,40 +42,49 @@ def _int_or_0(v):
     return int(v)
 
 
+def _read_full_file(x, path):
+    """Reads the full contentes of file path into array x."""
+    with open(path, 'rb') as reader:
+        reader.seek(0, 2)
+        size = reader.tell()
+        reader.seek(0, 0)
+        if size % x.itemsize != 0:
+            raise Exception('Truncated file')
+        x.fromfile(reader, size // x.itemsize)
+        return x
+
+
 class JaggedJournal(object):
     """Keeps track and persists needed details about the added arrays to a jagged instance."""
 
+    # a journal must be instantiated only when jagged knows its location
+    # a journal can be shared by many jagged instances (e.g. when storing different columns by different jaggeds)
+
     def __init__(self, jagged, path=None):
         super(JaggedJournal, self).__init__()
-        # the (master) jagged instance
         self.jagged = jagged
-        # a journal must be instantiated only when jagged knows its location
-        # a journal can be shared by many jagged instances (e.g. when storing different columns by different jaggeds)
         if path is None:
             path = op.join(jagged.path_or_fail(), 'journal')
         self._path = path
-        # keeped info, essentially counts of arrays and rows
-        self._lengths = None     # lenght of each added array
-        self._segments = None    # list of (base, size) segments (inferred from self._lengths)
-        self._numrows = None     # total number or rows (sum of self._lengths)
-        self._numarrays = None   # total number of arrays
-        self._sizes_file = op.join(self.jagged.path_or_fail(), 'sizes.json')
+        # base and length of each added array
+        self._lengths_file = op.join(self._path, 'lengths.array')
+        self._lengths = self._read_lengths()
+        self._bases = None
+        # total number of rows and arrays
+        self._sizes_file = op.join(self._path, 'size.json')
+        self._numrows = None
+        self._numarrays = None
         self._read_sizes()
 
     def added(self, data):
         """Informs of a new added array."""
+        self._add_length(data)
+        self._add_sizes(data)
 
-        self._lengths.append(len(data))
-        self._save_segment_info(data)
-
+    def _add_sizes(self, data):
+        """Writes the current numrows and numarrays values to persistent storage."""
         self._numrows += len(data)
         self._numarrays += 1
-        self._write_sizes()
-
-    # --- Total sizes
-
-    def _write_sizes(self):
-        """Writes the current numrows and numarrays values to persistent storage."""
         with open(self._sizes_file, 'w') as writer:
             json.dump({'numrows': self._numrows, 'numarrays': self._numarrays},
                       writer, encoding='utf-8', indent=2)
@@ -100,14 +110,24 @@ class JaggedJournal(object):
         """Returns the number of arrays in the jagged instance."""
         return self._numarrays
 
-    def _save_segment_info(self, data):
-        with open(op.join(self.jagged.path_or_fail(), 'segment_sizes.csv'), 'a') as writer:
-            writer.write(str('%d\n' % len(data)))
+    def _read_lengths(self):
+        lengths = array(b'l')
+        if op.isfile(self._lengths_file):
+            _read_full_file(lengths, self._lengths_file)
+        return lengths
 
-    def read_segments(self):
-        sizes = np.atleast_1d(np.loadtxt(op.join(self.jagged.path_or_fail(), 'segment_sizes.csv'), dtype=int))
-        bases = np.hstack(([0], np.cumsum(sizes)))
-        return list(zip(bases, sizes))
+    def _add_length(self, data):
+        self._lengths.append(len(data))
+        with open(self._lengths_file, 'ab') as writer:
+            array[-1:].tofile(writer)
+
+    def lengths(self):
+        return self._read_lengths()
+
+    def bases(self):
+        if self._bases is None or len(self._bases) < len(self._lengths):
+            self._bases = np.hstack(([0], np.cumsum(self._lengths)))
+        return self._bases
 
 
 @whatable(add_properties=False)
