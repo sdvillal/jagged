@@ -24,6 +24,7 @@ import numpy as np
 
 from jagged.misc import ensure_dir, subsegments, is_valid_segment
 from whatami import whatable
+import json
 
 try:
     import cPickle as pickle
@@ -32,6 +33,13 @@ except ImportError:  # pragma: no cover
 
 
 # --- Raw stores
+
+
+def _int_or_0(v):
+    if v is None:
+        return 0
+    return int(v)
+
 
 class JaggedJournal(object):
     """Keeps track and persists needed details about the added arrays to a jagged instance."""
@@ -46,58 +54,51 @@ class JaggedJournal(object):
             path = op.join(jagged.path_or_fail(), 'journal')
         self._path = path
         # keeped info, essentially counts of arrays and rows
-        self._numarrays = None   # total number of arrays
         self._lengths = None     # lenght of each added array
-        self._numrows = None     # total number or rows (sum of self._lengths)
         self._segments = None    # list of (base, size) segments (inferred from self._lengths)
+        self._numrows = None     # total number or rows (sum of self._lengths)
+        self._numarrays = None   # total number of arrays
+        self._sizes_file = op.join(self.jagged.path_or_fail(), 'sizes.json')
+        self._read_sizes()
 
     def added(self, data):
         """Informs of a new added array."""
-        self._write_numarrays()
+
         self._lengths.append(len(data))
         self._save_segment_info(data)
 
-        if self._numrows is None:
-            self._numrows = len(data)
-        else:
-            self._numrows += len(data)
-        self._write_numrows()
+        self._numrows += len(data)
+        self._numarrays += 1
+        self._write_sizes()
 
-        if self._numarrays is None:
-            self._numarrays = 1
-        else:
-            self._numarrays += 1
-        self._write_numarrays()
+    # --- Total sizes
 
-    def _read_numrows(self):
-        if self._numrows is None:
-            if op.isfile(op.join(self._path, 'numrows.txt')):
-                with open(op.join(self.jagged.path_or_fail(), 'numrows.txt')) as reader:
-                    self._numrows = int(reader.read())
-            else:
-                return 0
+    def _write_sizes(self):
+        """Writes the current numrows and numarrays values to persistent storage."""
+        with open(self._sizes_file, 'w') as writer:
+            json.dump({'numrows': self._numrows, 'numarrays': self._numarrays},
+                      writer, encoding='utf-8', indent=2)
+
+    def _read_sizes(self):
+        """Reads the current numrows and numarrays values from persistent storage.
+        If there is no info stored, makes them 0.
+        """
+        if op.isfile(self._sizes_file):
+            with open(op.join(self._sizes_file, 'sizes.json'), 'r') as reader:
+                sizes = json.load(reader)
+                self._numrows = _int_or_0(sizes['numrows'])
+                self._numarrays = _int_or_0(sizes['numarrays'])
+        else:
+            self._numrows = 0
+            self._numarrays = 0
+
+    def numrows(self):
+        """Returns the total number of rows in the jagged instance."""
         return self._numrows
-
-    def _write_numrows(self):
-        if self._numrows is not None:
-            with open(op.join(self.jagged.path_or_fail(), 'size.txt'), 'w') as writer:
-                writer.write(str('%d' % self._numrows))
 
     def numarrays(self):
         """Returns the number of arrays in the jagged instance."""
-        if self._numarrays is None:
-            if op.isfile(op.join(self.jagged.path_or_fail(), 'numarrays.txt')):
-                with open(op.join(self.jagged.path_or_fail(), 'numarrays.txt'), 'r') as reader:
-                    self._numarrays = int(reader.read())
-            else:
-                self._numarrays = 0
-                self._write_numarrays()
         return self._numarrays
-
-    def _write_numarrays(self):
-        if self._numarrays is not None:
-            with open(op.join(self.jagged.path_or_fail(), 'numarrays.txt'), 'w') as writer:
-                writer.write(str('%d' % self._numarrays))
 
     def _save_segment_info(self, data):
         with open(op.join(self.jagged.path_or_fail(), 'segment_sizes.csv'), 'a') as writer:
