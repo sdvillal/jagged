@@ -29,8 +29,8 @@ for contiguity in ('read', 'write', None, 'auto'):
         RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
 
 RAW_STORES.extend([
-    ('jr=npy', JaggedByNPY),
-    # ('jr=blp', JaggedByBloscpack),
+    # ('jr=npy', JaggedByNPY),
+    ('jr=blp', JaggedByBloscpack),
     # ('jr=blosc', JaggedByBlosc)
 ])
 

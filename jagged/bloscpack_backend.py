@@ -44,7 +44,7 @@ class JaggedByBloscpack(JaggedByNPY):
                                                    clevel=self.clevel,
                                                    shuffle=self.shuffle,
                                                    cname=self.cname)
-        pack_ndarray_file(data, self._dest_file(self._read_numarrays()),
+        pack_ndarray_file(data, self._dest_file(self.narrays),
                           chunk_size=self.chunk_size,
                           blosc_args=self._blosc_args,
                           bloscpack_args=self._bp_args)
