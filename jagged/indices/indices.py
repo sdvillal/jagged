@@ -15,6 +15,8 @@ All these classes are `whatable`.
    No explicit support for slice notation
 """
 
+# TODO: all this needs to be rewritten (and made useful) after RawStore refactoring
+
 from __future__ import absolute_import, unicode_literals, print_function
 import os.path as op
 from operator import itemgetter
