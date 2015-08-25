@@ -43,7 +43,7 @@ class JaggedByNPY(JaggedRawStore):
         pass
 
     def _append_hook(self, data):
-        np.save(self._dest_file(self._read_numarrays()), data)
+        np.save(self._dest_file(self.narrays), data)
 
     # --- Read
 

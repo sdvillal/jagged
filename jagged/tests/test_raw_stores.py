@@ -1,6 +1,7 @@
 # coding=utf-8
 """Tests the raw storers."""
 from __future__ import print_function, absolute_import, unicode_literals
+from future.builtins import zip
 import os.path as op
 import bcolz
 from .fixtures import *
@@ -25,7 +26,8 @@ def test_lifecycle(jagged_raw):
         assert jr.shape == data0.shape
         assert jr.dtype == data0.dtype
         assert jr.ndims == data0.ndim
-        assert jr.bases() == [(0, len(data0))]
+        assert jr.narrays == 1
+        assert len(jr) == len(data0)
         # first read
         assert np.allclose(data0, jr.get()[0])
         # even if we close it...
@@ -45,9 +47,11 @@ def test_lifecycle(jagged_raw):
         assert jr.shape == expected.shape
         assert jr.dtype == expected.dtype
         assert jr.ndims == expected.ndim
-        assert jr.bases() == [(0, len(data0)), (len(data0), len(data1))]
+        assert jr.narrays == 2
+        assert len(jr) == len(data0) + len(data1)
         # and the data will be properlly appended
-        assert np.allclose(expected, jr.get()[0])
+        assert np.allclose(data0, jr.get()[0])
+        assert np.allclose(data1, jr.get()[1])
 
 
 # -- Tests retrieve contiguous
@@ -127,8 +131,9 @@ def test_roundtrip(jagged_raw, dataset, columns):
 
     # read all
     with jagged_raw() as jr:
-        assert np.allclose(np.vstack(originals) if columns is None else np.vstack(originals)[:, columns],
-                           jr.get(columns=columns)[0])
+        for original, roundtripped in zip(originals, jr.get(columns=columns)):
+            original = original if columns is None else original[:, columns]
+            assert np.allclose(original, roundtripped)
 
     # read in insertion order
     test_read(originals, keys)
@@ -208,11 +213,11 @@ def test_chunked_copy_from(jagged_raw):
         for _ in range(10):
             jr0.append(np.zeros((2, 10)))
             jr0.append(np.ones((3, 10)))
-        jr1.append_from(jr0, chunksize=2)
+        jr1.append_from(jr0, arrays_per_chunk=2)
         assert np.allclose(jr0.get()[0], jr1.get()[0])
         with pytest.raises(ValueError) as excinfo:
-            jr1.append_from(jr0, chunksize=-1)
-        assert 'chunksize must be None or bigger than 0, it is -1' in str(excinfo.value)
+            jr1.append_from(jr0, arrays_per_chunk=-1)
+        assert 'arrays_per_chunk must be None or bigger than 0, it is -1' in str(excinfo.value)
 
 
 def test_mmap_check_sizes(tmpdir):
@@ -223,21 +228,21 @@ def test_mmap_check_sizes(tmpdir):
         mmf = jbm._mmpath
     # write row-sized junk
     with open(mmf, 'a') as writer:
-        writer.write('junk' * 10)
+        writer.write(str('junk' * 10))
     with JaggedByMemMap(dest) as jbm:
         with pytest.raises(Exception) as excinfo:
             jbm.get([(0, 2)])
         assert 'the number or rows inferred by file size does not coincide' in str(excinfo.value)
     # write junk that look like leftovers of an aborted write
     with open(mmf, 'a') as writer:
-        writer.write('jagged')
+        writer.write(str('jagged'))
     with JaggedByMemMap(dest) as jbm:
         with pytest.raises(Exception) as excinfo:
             jbm.get([(0, 2)])
         assert 'the memmap file has incomplete data' in str(excinfo.value)
     # make the memmap way too small
     with open(mmf, 'w') as writer:
-        writer.write('jagged')
+        writer.write(str('jagged'))
     with pytest.raises(Exception) as excinfo:
         jbm.get([(0, 2)])
     assert 'mmap length is greater than file size' in str(excinfo.value)

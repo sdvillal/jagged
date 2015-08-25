@@ -63,7 +63,7 @@ class JaggedJournal(object):
 
     def __init__(self, path):
         super(JaggedJournal, self).__init__()
-        self._path = path
+        self._path = ensure_dir(path)
         # base and length of each added array
         self._lengths_file = op.join(self._path, 'lengths.array')
         self._lengths = self._read_lengths()
@@ -92,7 +92,7 @@ class JaggedJournal(object):
         If there is no info stored, makes them 0.
         """
         if op.isfile(self._sizes_file):
-            with open(op.join(self._sizes_file, 'sizes.json'), 'r') as reader:
+            with open(self._sizes_file, 'r') as reader:
                 sizes = json.load(reader)
                 return _int_or_0(sizes['numrows']), _int_or_0(sizes['numarrays'])
         return 0, 0
@@ -111,7 +111,7 @@ class JaggedJournal(object):
         """Adds the length to the journal and immediatly persists it."""
         self._lengths.append(len(data))
         with open(self._lengths_file, 'ab') as writer:
-            array[-1:].tofile(writer)
+            self._lengths[-1:].tofile(writer)
 
     def _read_lengths(self):
         """Reads the lengths from persistent storage, if it does not exist, returns an empty array."""
@@ -290,7 +290,7 @@ class JaggedRawStore(object):
 
     def append_from(self, jagged, arrays_per_chunk=None):
         """Appends all the contents of jagged."""
-        for chunk in jagged.iter_arrays(arrays_per_chunk):
+        for chunk in jagged.iter_arrays(arrays_per_chunk=arrays_per_chunk):
             for data in chunk:
                 self.append(data)
 
@@ -351,7 +351,7 @@ class JaggedRawStore(object):
         elif arrays_per_chunk <= 0:
             raise ValueError('arrays_per_chunk must be None or bigger than 0, it is %r' % arrays_per_chunk)
         else:
-            for segments in partition_all(arrays_per_chunk, self.journal().numarrays()):
+            for segments in partition_all(arrays_per_chunk, range(self.journal().numarrays())):
                 yield self.get(segments)
 
     def __iter__(self, arrays_per_chunk=None):
@@ -425,7 +425,6 @@ class JaggedRawStore(object):
         if template is None:
             return None
         return 'F' if np.isfortran(template) else 'C'
-
 
     # --- Context manager and other magics...
 
@@ -647,7 +646,7 @@ class JaggedIndex(object):
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *_):
         self.close()
 
 
