@@ -37,6 +37,16 @@ def ensure_dir(path):  # pragma: no cover
     return ensure_writable_dir(path)
 
 
+@contextmanager
+def cd(newdir):
+    prevdir = os.getcwd()
+    os.chdir(op.expanduser(newdir))
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
+
+
 # --- Intervals
 
 def crossings(x, threshold=0, after=False):
