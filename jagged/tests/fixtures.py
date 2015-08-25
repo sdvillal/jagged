@@ -13,6 +13,7 @@ from jagged.h5py_backend import JaggedByH5Py
 from jagged.mmap_backend import JaggedByMemMap
 from jagged.npy_backend import JaggedByNPY
 from jagged.bloscpack_backend import JaggedByBloscpack
+from jagged.pickle_backend import JaggedByPickle
 
 RAW_STORES = []
 
@@ -31,7 +32,8 @@ for contiguity in ('read', 'write', None, 'auto'):
 RAW_STORES.extend([
     ('jr=npy', JaggedByNPY),
     ('jr=blp', JaggedByBloscpack),
-    ('jr=blosc', JaggedByBlosc)
+    ('jr=blosc', JaggedByBlosc),
+    ('jr=pickle', JaggedByPickle)
 ])
 
 stores = [store for _, store in RAW_STORES]
