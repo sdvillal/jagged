@@ -23,11 +23,11 @@ class JaggedByMemMap(LinearRawStorage):
     # --- Read
 
     def _open_read(self):
-        self._read_meta()
         if self._mm is None:
             self._mm = np.memmap(self._mmpath,
                                  dtype=self.dtype, shape=self.shape, order=self.order,
                                  mode='r')
+        self._check_sizes()
 
     def _get_hook(self, base, size, columns, dest):
         view = self._mm[base:base+size]
