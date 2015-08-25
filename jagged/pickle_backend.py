@@ -1,17 +1,21 @@
 # coding=utf-8
+import gzip
 from operator import itemgetter
 from jagged.base import JaggedRawStore
 import os.path as op
-import pandas as pd
-from jagged.misc import ensure_dir
+try:
+    import cPickle as pickle
+except ImportError:  # pragma: no cover
+    import pickle
 
 
 class JaggedByPickle(JaggedRawStore):
     """A chunked store based on pickle."""
 
-    def __init__(self, path=None, journal=None, arrays_per_chunk=1000):
+    def __init__(self, path=None, journal=None, arrays_per_chunk=1000, compress=False):
         super(JaggedByPickle, self).__init__(path, journal)
         self.arrays_per_chunk = arrays_per_chunk
+        self.compress = compress
         self._cache = []
         self._cached_pickle_num = None
         self._writing = None
@@ -22,17 +26,23 @@ class JaggedByPickle(JaggedRawStore):
         return index // self.arrays_per_chunk
 
     def _pickle_file(self, index):
-        return op.join(self.path_or_fail(), '%d.pkl' % self._pickle_num(index))
+        path = op.join(self.path_or_fail(), '%d.pkl' % self._pickle_num(index))
+        return (path + '.gz') if self.compress else path
 
     def _save_pickle(self):
         if self.is_writing:
-            pd.to_pickle(self._cache, self._pickle_file(self.narrays))
+            path = self._pickle_file(self.narrays)
+            with gzip.open(path, 'wb') if self.compress else open(path, 'wb') as writer:
+                pickle.dump(self._cache, writer, protocol=2)
+                # protocol=2 instead of highest to maintain py2 compat of the store
 
     def _read_pickle(self, index):
         pickle_num = self._pickle_num(index)
         if self._cached_pickle_num != pickle_num:
             try:
-                self._cache = pd.read_pickle(self._pickle_file(index))
+                path = self._pickle_file(self.narrays)
+                with gzip.open(path, 'rb') if self.compress else open(path, 'rb') as reader:
+                    self._cache = pickle.load(reader)
             except IOError:
                 self._cache = []
             self._cached_pickle_num = pickle_num
