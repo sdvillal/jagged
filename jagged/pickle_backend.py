@@ -40,7 +40,7 @@ class JaggedByPickle(JaggedRawStore):
         pickle_num = self._pickle_num(index)
         if self._cached_pickle_num != pickle_num:
             try:
-                path = self._pickle_file(self.narrays)
+                path = self._pickle_file(index)
                 with gzip.open(path, 'rb') if self.compress else open(path, 'rb') as reader:
                     self._cache = pickle.load(reader)
             except IOError:
