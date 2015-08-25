@@ -90,7 +90,7 @@ class JaggedByH5Py(LinearRawStorage):
                 # http://docs.h5py.org/en/latest/high/dataset.html
                 chunks = None
                 if self.chunklen is not None:
-                    chunks = (self.chunklen,) + (data.shape[1:] if data.ndims > 1 else ())
+                    chunks = (self.chunklen,) + (data.shape[1:] if data.ndim > 1 else ())
                 self._dset = self._h5.create_dataset(self._dset_name,
                                                      dtype=data.dtype,
                                                      shape=(0, data.shape[1]),

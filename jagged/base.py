@@ -386,8 +386,8 @@ class JaggedRawStore(object):
     @property
     def shape(self):
         """Returns a tuple with the current size of the storage in each dimension."""
-        ncol = self.ncols
-        return None if ncol is None else (self.nrows, ncol)
+        ncols = self.ncols
+        return None if ncols is None else (self.nrows, ncols)
 
     @property
     def dtype(self):
@@ -477,6 +477,9 @@ class LinearRawStorage(JaggedRawStore):
         if keys is None:
             keys = range(self.journal().numarrays())
         keys = [self.journal().base_size(key) if isinstance(key, int) else key for key in keys]
+
+        if 0 == len(keys):
+            return []
 
         # retrieve data
         ne, nc = self.shape

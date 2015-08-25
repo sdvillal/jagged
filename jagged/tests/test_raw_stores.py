@@ -130,10 +130,10 @@ def test_roundtrip(jagged_raw, dataset, columns):
                 assert np.allclose(original, roundtripped)
 
     # read all
-    with jagged_raw() as jr:
-        for original, roundtripped in zip(originals, jr.get(columns=columns)):
-            original = original if columns is None else original[:, columns]
-            assert np.allclose(original, roundtripped)
+    # with jagged_raw() as jr:
+    #     for original, roundtripped in zip(originals, jr.get(columns=columns)):
+    #         original = original if columns is None else original[:, columns]
+    #         assert np.allclose(original, roundtripped)
 
     # read in insertion order
     test_read(originals, keys)
