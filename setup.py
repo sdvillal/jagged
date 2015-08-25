@@ -22,7 +22,7 @@ setup(
     author_email='sdvillal@gmail.com',
     packages=['jagged',
               'jagged.compression',
-              # 'jagged.benchmarks',
+              'jagged.benchmarks',
               'jagged.tests'],
     classifiers=[
         'Intended Audience :: Science/Research',
@@ -36,16 +36,14 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Operating System :: Unix',
     ],
-    install_requires=['numpy',
+    install_requires=['future',
+                      'numpy',
+                      'pandas',
                       'whatami>=3.0.0',
                       'toolz',
-                      # DELETE THESE
-                      'pandas',
-                      'seaborn',
-                      'matplotlib', 'bcolz', 'bloscpack', 'future'],
-    extras_require={
-        'bcolz': ['bcolz'],
-        'h5py': ['h5py'],
-    },
+                      'blosc',
+                      'bloscpack',
+                      'bcolz',
+                      'h5py'],
     tests_require=['pytest'],
 )
