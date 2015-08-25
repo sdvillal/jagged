@@ -2,6 +2,7 @@
 
 import bcolz
 from whatami import whatable
+import os.path as op
 from .base import LinearRawStorage
 
 
@@ -57,6 +58,10 @@ class JaggedByCarray(LinearRawStorage):
         self.cparams = whatable(cparams, add_properties=True)
         self._bcolz = None
 
+    def _bcolz_dir(self):
+        # Needs to be different than self._path or metainfo gets deleted
+        return op.join(self.path_or_fail(), 'bcolz')
+
     # --- Write
 
     def _open_write(self, data=None):
@@ -64,7 +69,7 @@ class JaggedByCarray(LinearRawStorage):
             try:  # append
                 self._bcolz = \
                     bcolz.carray(None,
-                                 rootdir=self.path_or_fail(),
+                                 rootdir=self._bcolz_dir(),
                                  mode='a',
                                  # bcolz conf in case mode='a' semantics change to create, otherwise innocuous
                                  chunklen=self.chunklen,
@@ -73,7 +78,7 @@ class JaggedByCarray(LinearRawStorage):
             except:  # create
                 self._bcolz = \
                     bcolz.carray(data[0:0],
-                                 rootdir=self.path_or_fail(),
+                                 rootdir=self._bcolz_dir(),
                                  mode='w',
                                  chunklen=self.chunklen,
                                  expectedlen=self.expectedlen,
@@ -86,7 +91,7 @@ class JaggedByCarray(LinearRawStorage):
 
     def _open_read(self):
         if self._bcolz is None:
-            self._bcolz = bcolz.carray(None, rootdir=self.path_or_fail(), mode='r')
+            self._bcolz = bcolz.carray(None, rootdir=self._bcolz_dir(), mode='r')
 
     def _get_hook(self, base, size, columns, dest):
         if dest is not None and columns is None:

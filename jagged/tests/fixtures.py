@@ -16,22 +16,22 @@ from jagged.bloscpack_backend import JaggedByBloscpack
 
 RAW_STORES = []
 
-SEGMENT_RAW_STORES = (
-    # ('jr=carray', JaggedByCarray),
-    # ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
+LINEAR_RAW_STORES = (
+    ('jr=carray', JaggedByCarray),
+    ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
     ('jr=h5py', JaggedByH5Py),
     ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100)),
-    # ('jr=mmap', JaggedByMemMap),
+    ('jr=mmap', JaggedByMemMap),
 )
 
 for contiguity in ('read', 'write', None, 'auto'):
-    for name, store in SEGMENT_RAW_STORES:
+    for name, store in LINEAR_RAW_STORES:
         RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
 
 RAW_STORES.extend([
-    # ('jr=npy', JaggedByNPY),
-    # ('jr=blp', JaggedByBloscpack),
-    # ('jr=blosc', JaggedByBlosc)
+    ('jr=npy', JaggedByNPY),
+    ('jr=blp', JaggedByBloscpack),
+    ('jr=blosc', JaggedByBlosc)
 ])
 
 stores = [store for _, store in RAW_STORES]
