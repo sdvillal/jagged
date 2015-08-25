@@ -6,20 +6,14 @@ from future.utils import PY3
 import numpy as np
 from jagged.base import LinearRawStorage
 
-try:
-    import cPickle as pickle
-except ImportError:  # pragma: no cover
-    import pickle
-
 
 class JaggedByMemMap(LinearRawStorage):
     """Provides numpy arrays as views of an underlying memmapped array."""
 
-    def __init__(self, path=None, autoviews=True, contiguity=None):
-        super(JaggedByMemMap, self).__init__(path, contiguity=contiguity)
+    def __init__(self, path=None, journal=None, contiguity=None, autoviews=True):
+        super(JaggedByMemMap, self).__init__(path, journal=journal, contiguity=contiguity)
 
         if self._path is not None:
-            self._meta = op.join(self._path, 'meta.pkl')
             self._mmpath = op.join(self._path, 'data.mm')
 
         self._mm = None  # numpy memmap for reading / file handler for writing

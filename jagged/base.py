@@ -15,6 +15,7 @@ All these classes are `whatable`.
    Retrieve only by contiguous blocks (i.e. no explicit support for slice notation)
 """
 from __future__ import absolute_import, unicode_literals, print_function
+from future.builtins import range, map
 from array import array
 from functools import partial
 import os.path as op
@@ -287,32 +288,13 @@ class JaggedRawStore(object):
         """Saves the data, returns nothing."""
         raise NotImplementedError()
 
-    def append_from(self, jagged, chunksize=None):
-        """Appends all the contents of `jagged`."""
-        for chunk in jagged.iter_segments(chunksize):
+    def append_from(self, jagged, arrays_per_chunk=None):
+        """Appends all the contents of jagged."""
+        for chunk in jagged.iter_arrays(arrays_per_chunk):
             for data in chunk:
                 self.append(data)
 
-    # -- Iteration
-
-    def iter_segments(self, segments_per_chunk=None):
-        if segments_per_chunk is None:
-            for segment in self.read_segments():
-                yield self.get([segment])
-        elif segments_per_chunk <= 0:
-            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
-        else:
-            for segments in partition_all(segments_per_chunk, self.read_segments()):
-                yield self.get(segments)
-
-    def iter_rows(self, max_rows_per_chunk):
-        # Iterates segments in chunks with max_rows_per_chunk as upper bound
-        # (but will give at least one segment at a time)
-        # This can be more (e.g. SegmentRawStorage) or less involved (e.g. JaggedByNumpy)
-        # Useful to iterate with really controlled amount of memory
-        raise NotImplementedError()
-
-    # --- Reading data
+    # --- Reading
 
     def _open_read(self):
         """Opens in reading mode, returns None."""
@@ -359,7 +341,31 @@ class JaggedRawStore(object):
 
         return views if factory is None else map(factory, views)
 
-    # --- Factories / curries / partials
+    # -- Iteration
+
+    def iter_arrays(self, arrays_per_chunk=None):
+        """Iterates over the arrays in this store."""
+        if arrays_per_chunk is None:
+            for key in range(self.journal().numarrays()):
+                yield self.get([key])
+        elif arrays_per_chunk <= 0:
+            raise ValueError('arrays_per_chunk must be None or bigger than 0, it is %r' % arrays_per_chunk)
+        else:
+            for segments in partition_all(arrays_per_chunk, self.journal().numarrays()):
+                yield self.get(segments)
+
+    def __iter__(self, arrays_per_chunk=None):
+        """Alias to iter_arrays."""
+        return self.iter_arrays(arrays_per_chunk=arrays_per_chunk)
+
+    # def iter_rows(self, max_rows_per_chunk):
+    #     # Iterates segments in chunks with max_rows_per_chunk as upper bound
+    #     # (but will give at least one segment at a time)
+    #     # This can be more (e.g. SegmentRawStorage) or less involved (e.g. JaggedByNumpy)
+    #     # Useful to iterate with really controlled amount of memory
+    #     raise NotImplementedError()
+
+    #  --- Factories / curries / partials
 
     def copyconf(self, **params):
         """Returns a partial function that instantiates this type of store
@@ -404,15 +410,22 @@ class JaggedRawStore(object):
 
     @property
     def nrows(self):
-        """Returns the number of rows in the jagged instance."""
+        """Returns the number of rows in the store."""
         return self.journal().numrows()
 
     @property
+    def narrays(self):
+        """Returns the number or arrays in the store."""
+        return self.journal().numarrays()
+
+    @property
     def order(self):
+        """Returns 'C' for row major, 'F' for column major."""
         template = self.template()
         if template is None:
             return None
         return 'F' if np.isfortran(template) else 'C'
+
 
     # --- Context manager and other magics...
 
@@ -431,13 +444,16 @@ class JaggedRawStore(object):
 
 class LinearRawStorage(JaggedRawStore):
 
-    def __init__(self, path, contiguity=None):
+    def __init__(self, path, journal=None, contiguity=None):
         """
         A segment raw storage can access arbitrary rows using base (row index in the storage) and size
         (number of rows to retrieve).
 
         Parameters
         ----------
+        journal : must quack like JaggedJournal, default None
+          see base class
+
         contiguity : string or None, default None
            indicates the type of contiguity sought for the results; for performance segments retrieval
            does not need to be done in any order
@@ -454,7 +470,7 @@ class LinearRawStorage(JaggedRawStore):
            beware that forcing contiguity for speed might lead to memory leaks
            (the whole retrieved segments won't be released while any of them is reacheable)
         """
-        super(LinearRawStorage, self).__init__(path)
+        super(LinearRawStorage, self).__init__(path, journal=journal)
         self.contiguity = contiguity
 
     def _get_views(self, keys, columns):
@@ -472,14 +488,12 @@ class LinearRawStorage(JaggedRawStore):
     def _get_hook(self, base, size, columns, dest):
         raise NotImplementedError()
 
-    def iterchunks(self, chunksize):
-        """Reads `chunksize` rows at a time until all is read.
-        As opposed to iter_rows, this warrants equal sized, never bigger than specified, chunks.
-        """
+    def iter_rows(self, rows_per_chunk):
+        """Reads rows_per_chunk rows at a time until all is read."""
         base = 0
         total = len(self)
         while base < total:
-            size = min(chunksize, total - base)
+            size = min(rows_per_chunk, total - base)
             yield self.get([(base, size)])[0]
             base += size
 
@@ -812,63 +826,3 @@ class JaggedStore(object):
     @property
     def dtype(self):
         return self._jagged.dtype
-
-#
-# TODO: concurrency on reading
-# Put a lock and make clear write is not possible in multithreading
-# File-based locking for catching multiprocessing races and other problems...
-#   http://tilde.town/~cristo/file-locking-in-python.html
-# import portalocker
-# def lock(self):
-#     # very simple concurrency model
-#     if self._write:
-#         lock_method = portalocker.LOCK_EX | portalocker.LOCK_NB
-#     else:
-#         lock_method = portalocker.LOCK_SH | portalocker.LOCK_NB
-#     self._lockfile = portalocker.Lock(op.join(path, 'lockfile'), lock_method=lock_method, timeout=0)
-#     (Requires my branch of portalocker
-# Do later and program well in the meantime...
-#
-# TODO: database backend, castra/blosc/bloscpack backend, pytables backend, memmap backend, scidb backend...
-#       npy backend, one traj per file backend, one hdf5 dataset per traj backend...
-#
-# FIXME: too broad exception catchings
-#
-# TODO: make this fault tolerant; it actually kind of is already, but we should write keys incrementally and
-#       coordinate flushes with raw blah...
-#
-# Are we reinventing the wheel?
-#
-# Look at blaze, bioinformatics approaches for intervals and the like.
-#
-# ---- About JaggedStore
-#
-# Only one JaggedRawStore is allowed to be used.
-# This restriction is in place to free me from thinking
-# about consistency of data accross backends, and may be
-# removed in the future.
-#
-# Allow for multiple views on the segments; for example:
-#  - original trajectories
-#  - saccades
-#  - when the animal is behaving / collaborating / engaging
-#  - perturbations
-#  - where a filter flags a bad trajectory
-# This can be done by:
-#   - switching indices (e.g. an index for saccades, an index for perturbs...)
-#   - single-index, taking care that the keys in the index indicate well the type os
-#     (and allowing partial key matching, pandas amazing indices can be helpful here)
-# We must think of a mechanism to share indices accross different raw-jagged instances
-# Let's do when all this have been properly used in production
-#
-# How to share indices?
-#  - Instantiate a new JaggedStore, same root, different jagged_name.
-#  - Copy the jagged stuff without caring about keys
-#
-# Index <-> Jagged is actually a many-to-many relationship
-# What about .register(index, jagged) to make this explicit?
-#
-# TODO: the usual weakref to tame memory consumption
-#
-# TODO: versioning mechanism (simply define versions for everything and store them somewhere)
-#

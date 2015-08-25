@@ -1,24 +1,23 @@
 # coding=utf-8
+from future.builtins import range
 from itertools import chain
 import os.path as op
 import os
 import numpy as np
-from toolz import partition_all
 from jagged.base import JaggedRawStore
 from jagged.misc import ensure_dir
 
 
 class JaggedByNPY(JaggedRawStore):
+    """Stores each array in an individual .npy file."""
 
-    def __init__(self, path=None):
-        super(JaggedByNPY, self).__init__(path)
-        self._writing = False
+    def __init__(self, path=None, journal=None):
+        super(JaggedByNPY, self).__init__(path, journal=journal)
         self._shards = None
         if path is not None:
             self._all_shards()
 
     # We can do this memory map (see np.load)
-    # We can reuse most of this stuff but drop blosc/bloscpack to the mix
 
     def _all_shards(self):
         if self._shards is None:
@@ -35,10 +34,13 @@ class JaggedByNPY(JaggedRawStore):
             numarrays = max(chain([numarrays], (int(fn[:-4]) + 1 for fn in os.listdir(shard))))
         return numarrays
 
+    def check_numarrays(self):
+        assert self._infer_numarrays() == self.journal().numarrays()
+
     # --- Write
 
     def _open_write(self, data=None):
-        self._writing = True
+        pass
 
     def _append_hook(self, data):
         np.save(self._dest_file(self._read_numarrays()), data)
@@ -46,7 +48,7 @@ class JaggedByNPY(JaggedRawStore):
     # --- Read
 
     def _open_read(self):
-        self._writing = False
+        pass
 
     def _read_one(self, key):
         return np.load(self._dest_file(key))
@@ -59,37 +61,22 @@ class JaggedByNPY(JaggedRawStore):
 
     def _get_views(self, keys, columns):
         if keys is None:
-            return [np.vstack([self._get_one(key, columns) for key in range(self._read_numarrays())])]
+            return list(self._get_one(key, columns) for key in range(self.journal().numarrays()))
         return [self._get_one(key, columns) for key in keys]
-
-    # --- Iterate
-
-    def iter_segments(self, segments_per_chunk=None):
-        if segments_per_chunk is None:
-            for key in range(self._read_numarrays()):
-                yield self.get([key])
-        elif segments_per_chunk <= 0:
-            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
-        else:
-            for segments in partition_all(segments_per_chunk, range(self._read_numarrays())):
-                yield self.get(segments)
-
-    def iter_rows(self, max_rows_per_chunk):
-        raise NotImplementedError()
 
     # --- Lifecycle
 
     @property
     def is_writing(self):
-        return self._writing is True
+        return True
 
     @property
     def is_reading(self):
-        return self._writing is False
+        return True
 
     @property
     def is_open(self):
-        return self._writing is not None
+        return True
 
     def close(self):
-        self._writing = None
+        pass

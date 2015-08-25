@@ -11,6 +11,7 @@ class JaggedByH5Py(LinearRawStorage):
 
     def __init__(self,
                  path=None,
+                 journal=None,
                  contiguity=None,
                  # hdf params
                  dset_name='data',
@@ -19,7 +20,7 @@ class JaggedByH5Py(LinearRawStorage):
                  compression_opts=None,
                  shuffle=False,
                  checksum=False):
-        super(JaggedByH5Py, self).__init__(path, contiguity=contiguity)
+        super(JaggedByH5Py, self).__init__(path, journal=journal, contiguity=contiguity)
 
         self._dset_name = dset_name
 
@@ -58,7 +59,7 @@ class JaggedByH5Py(LinearRawStorage):
                 self._dset.read_direct(dest, source_sel=np.s_[base:base+size])
                 return dest
 
-        # n.b.: tuple(columns) to force 2d if columns happens to be a one-element list
+        # N.B.: tuple(columns) to force 2d if columns happens to be a one-element list
         # column-subset is requested
         # h5py only supports increasing order indices in fancy indexing
         #   https://github.com/h5py/h5py/issues/368
@@ -107,7 +108,6 @@ class JaggedByH5Py(LinearRawStorage):
         size = len(data)
         self._dset.resize(base + size, axis=0)
         self._dset[base:(base+size)] = data
-        return base, size
 
     # --- Lifecycle
 
@@ -127,17 +127,3 @@ class JaggedByH5Py(LinearRawStorage):
         if self._h5 is not None:
             self._h5.close()
             self._h5 = None
-
-    # --- Properties
-
-    def _backend_attr_hook(self, attr):
-        return getattr(self._dset, attr)
-
-
-#
-# From h5py docs:
-# Chunking has performance implications.
-# It’s recommended to keep the total size of your chunks between 10 KiB and 1 MiB,
-# larger for larger datasets. Also keep in mind that when any element in a chunk is accessed,
-# the entire chunk is read from disk.
-#

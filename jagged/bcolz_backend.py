@@ -20,6 +20,12 @@ class JaggedByCarray(LinearRawStorage):
     path : string
       the carray will/must reside here
 
+    contiguity : string, default None
+      see base class
+
+    journal : must quack like JaggedJournal, default None
+      see base class
+
     expectedlen : int, default None
       passed to the carray on creation, the expected number of rows in the store
       carray will use it to guess a good chunksize
@@ -37,13 +43,14 @@ class JaggedByCarray(LinearRawStorage):
 
     def __init__(self,
                  path=None,
+                 journal=None,
                  contiguity=None,
                  # bcolz params
                  expectedlen=None,
                  chunklen=1024 ** 2,
                  cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
 
-        super(JaggedByCarray, self).__init__(path, contiguity=contiguity)
+        super(JaggedByCarray, self).__init__(path, journal=journal, contiguity=contiguity)
 
         self.expectedlen = expectedlen
         self.chunklen = chunklen
@@ -74,7 +81,6 @@ class JaggedByCarray(LinearRawStorage):
 
     def _append_hook(self, data):
         self._bcolz.append(data)
-        return len(self) - len(data), len(data)
 
     # --- Read
 
@@ -84,7 +90,8 @@ class JaggedByCarray(LinearRawStorage):
 
     def _get_hook(self, base, size, columns, dest):
         if dest is not None and columns is None:
-            self._bcolz._getrange(base, size, dest)  # measure if this has any performance benefit
+            # measure if this has any performance benefit, if so, asks for it to be public API
+            self._bcolz._getrange(base, size, dest)
             return dest
         if columns is not None:
             view = self._bcolz[base:base+size, columns]
@@ -113,42 +120,3 @@ class JaggedByCarray(LinearRawStorage):
         if self.is_writing:
             self._bcolz.flush()
         self._bcolz = None
-
-    # --- Properties
-
-    def _backend_attr_hook(self, attr):
-        return getattr(self._bcolz, attr)
-
-
-#
-# Can bcolz be apt for random row retrieval and range queries?
-# Because of our query types and usage patterns, probably yes...
-#
-# Naive random access to BCOLZ in disk sucks a little on random read,
-# although it is not as bad as with storing many files in an HDF5 *hierarchy*
-#
-# ctables are a tad slow in preliminary tests
-#
-# Because chunking and many files might actually hamper retrieval (esp. if looking at nfs and friends),
-# look at just storing in one file, compress with blosc or bloscpack (ala blosc/castra)
-#
-# TODO: JaggedByCtable
-# TODO: JaggedByCastra (i.e. blosc+bloscpack, can use recent c-blosc, one or more files...)
-#
-# We can choose between:
-#   - contiguity when writing (i.e. write to adjacent positions, order in dest array on increasing base)
-#   - contiguity for further reads (i.e. make order in dest array as the order of the passed segments)
-# Probably contiguity for further reads is better; just for example check speeds of access (way faster)
-#
-# TODO: ask for carray._getrange to be public API
-#
-# FIXME: naive inefficient implementation (double alloc and copy) for some retrievals
-#        build an extension, can almost be copied verbatim from carray_ext.pyx/__getitem__
-#        also look at chunk __getitem__ and _getitem, possibly others
-#        it would be great if that is bundled with bcolz, so we do not depend on cython...
-#
-# TODO: on open read, check that cparams are correct,
-#       if not, just transmute (make this store have the correct parameters)
-#       the same for chunksize...
-#       can be a pain in the ass, so maybe just be picky and fail?
-#

@@ -1,9 +1,9 @@
+from future.builtins import range
 from functools import partial
 from mmap import mmap, ACCESS_READ
 from operator import itemgetter
 import os.path as op
-import numpy as np
-from toolz import merge, partition_all
+from toolz import merge
 from jagged.base import JaggedRawStore, JaggedJournal
 from jagged.compression.compressors import BloscCompressor
 from whatami import whatable
@@ -21,8 +21,8 @@ class JaggedByBlosc(JaggedRawStore):
     # as expected after the columnar benchmarks with raw
     # python-blosc
 
-    def __init__(self, path=None, compressor=BloscCompressor):
-        super(JaggedByBlosc, self).__init__(path)
+    def __init__(self, path=None, journal=None, compressor=BloscCompressor):
+        super(JaggedByBlosc, self).__init__(path, journal=journal)
         self.compressor = compressor  # for whatami, weird
         self._compressor = None
         self._mm = None
@@ -45,52 +45,45 @@ class JaggedByBlosc(JaggedRawStore):
                                                order=self.order)
         return self._compressor
 
+    # --- Write
+
+    def _open_write(self, data=None):
+        self._mm = open(op.join(self.path_or_fail(), 'data'), 'ab')
+        self._writing = True
+
     def _append_hook(self, data):
         compressor = self._make_compressor()
         compressed = compressor.compress(data)
         self._mm.write(compressed)
         self.bytes_journal().append(compressed)
 
+    # --- Read
+
     def _open_read(self):
         self._mm = open(op.join(self.path_or_fail(), 'data'), 'r')
         self._mm = mmap(self._mm.fileno(), 0, access=ACCESS_READ)
         self._writing = False
 
-    def _open_write(self, data=None):
-        self._mm = open(op.join(self.path_or_fail(), 'data'), 'ab')
-        self._writing = True
-
-    def iter_segments(self, segments_per_chunk=None):  # copied verbatim from NPY, factorise
-        if segments_per_chunk is None:
-            for key in range(self._read_numarrays()):
-                yield self.get([key])
-        elif segments_per_chunk <= 0:
-            raise ValueError('chunksize must be None or bigger than 0, it is %r' % segments_per_chunk)
-        else:
-            for segments in partition_all(segments_per_chunk, range(self._read_numarrays())):
-                yield self.get(segments)
-
     def _get_views(self, keys, columns):
 
-        concat = keys is None
         if keys is None:
-            keys = range(self._read_numarrays())
+            keys = range(self.narrays)
 
         keys = [(key, order) for order, key in enumerate(keys)]
 
-        segments = self._read_bytes_segments()
         compressor = self._make_compressor()
         views = []
         for key, order in sorted(keys):
-            base, size = segments[key]
+            base, size = self.bytes_journal().base_size(key)  # cache these segments?
             array = compressor.decompress(self._mm[base:base+size])
             if columns is not None:
                 array = array[:, tuple(columns)]
             views.append((array, order))
         views = list(map(itemgetter(0), sorted(views, key=itemgetter(1))))
-        if concat:
-            return [np.vstack(views)]
+
         return views
+
+    # --- Lifecycle
 
     @property
     def is_reading(self):
@@ -103,9 +96,6 @@ class JaggedByBlosc(JaggedRawStore):
     @property
     def is_open(self):
         return self._mm is not None
-
-    def iter_rows(self, max_rows_per_chunk):
-        raise NotImplementedError()
 
     def close(self):
         if self.is_open:

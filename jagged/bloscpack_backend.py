@@ -10,6 +10,7 @@ class JaggedByBloscpack(JaggedByNPY):
 
     def __init__(self,
                  path=None,
+                 journal=None,
                  # blosc
                  clevel=5,
                  shuffle=True,
@@ -18,7 +19,7 @@ class JaggedByBloscpack(JaggedByNPY):
                  chunk_size=DEFAULT_CHUNK_SIZE,
                  offsets=False,
                  checksum='None'):
-        super(JaggedByBloscpack, self).__init__(path)
+        super(JaggedByBloscpack, self).__init__(path, journal=journal)
         self.clevel = clevel
         self.shuffle = shuffle
         self.cname = cname
