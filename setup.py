@@ -39,7 +39,7 @@ setup(
     install_requires=['future',
                       'numpy',
                       'pandas',
-                      'whatami>=3.0.0',
+                      'whatami>=4.0.0',
                       'toolz',
                       'blosc',
                       'bloscpack',
