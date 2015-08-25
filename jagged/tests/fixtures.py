@@ -30,8 +30,8 @@ for contiguity in ('read', 'write', None, 'auto'):
 
 RAW_STORES.extend([
     # ('jr=npy', JaggedByNPY),
-    ('jr=blp', JaggedByBloscpack),
-    # ('jr=blosc', JaggedByBlosc)
+    # ('jr=blp', JaggedByBloscpack),
+    ('jr=blosc', JaggedByBlosc)
 ])
 
 stores = [store for _, store in RAW_STORES]

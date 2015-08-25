@@ -1,12 +1,12 @@
-from future.builtins import range
-from functools import partial
 from mmap import mmap, ACCESS_READ
 from operator import itemgetter
 import os.path as op
-from toolz import merge
+
+from future.builtins import range
+
 from jagged.base import JaggedRawStore, JaggedJournal
 from jagged.compression.compressors import BloscCompressor
-from whatami import whatable
+from whatami import What
 
 
 class JaggedByBlosc(JaggedRawStore):
@@ -23,8 +23,7 @@ class JaggedByBlosc(JaggedRawStore):
 
     def __init__(self, path=None, journal=None, compressor=BloscCompressor):
         super(JaggedByBlosc, self).__init__(path, journal=journal)
-        self.compressor = compressor  # for whatami, weird
-        self._compressor = None
+        self.compressor = compressor
         self._mm = None
         self._writing = None
         self._bytes_journal = None
@@ -32,18 +31,20 @@ class JaggedByBlosc(JaggedRawStore):
     def bytes_journal(self):
         if self._bytes_journal is None:
             self._bytes_journal = JaggedJournal(op.join(self.path_or_fail(), 'bytes_journal'))
+        return self._bytes_journal
 
-    def copyconf(self, **params):
-        conf = self.what().conf.copy()
-        conf['compressor'] = self._make_compressor()
-        return whatable(partial(self.__class__, **merge(conf, params)), add_properties=False)
+    def what(self):
+        try:
+            return What(self.__class__.__name__, {'compressor': self.compressor()})
+        except TypeError:
+            return What(self.__class__.__name__, {'compressor': self.compressor})
 
-    def _make_compressor(self):
-        if self._compressor is None:
-            self._compressor = self.compressor(dtype=self.dtype,
-                                               shape=self.shape,
-                                               order=self.order)
-        return self._compressor
+    def _compressor(self):
+        if not isinstance(self.compressor, BloscCompressor):
+            self.compressor = self.compressor(dtype=self.dtype,
+                                              shape=self.shape,
+                                              order=self.order)
+        return self.compressor
 
     # --- Write
 
@@ -52,7 +53,7 @@ class JaggedByBlosc(JaggedRawStore):
         self._writing = True
 
     def _append_hook(self, data):
-        compressor = self._make_compressor()
+        compressor = self._compressor()
         compressed = compressor.compress(data)
         self._mm.write(compressed)
         self.bytes_journal().append(compressed)
@@ -71,7 +72,7 @@ class JaggedByBlosc(JaggedRawStore):
 
         keys = [(key, order) for order, key in enumerate(keys)]
 
-        compressor = self._make_compressor()
+        compressor = self._compressor()
         views = []
         for key, order in sorted(keys):
             base, size = self.bytes_journal().base_size(key)  # cache these segments?
