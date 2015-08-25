@@ -178,14 +178,16 @@ class JaggedRawStore(object):
     # --- Template
 
     def template(self):
-        template_path = op.join(self.path_or_fail(), 'template.npy')
+        template_dir = ensure_dir(op.join(self.path_or_fail(), 'template'))
+        template_path = op.join(template_dir, 'template.npy')
         if self._template is None:
             if op.isfile(template_path):
                 self._template = np.load(template_path)
         return self._template
 
     def _write_template(self, data):
-        template_path = op.join(self.path_or_fail(), 'template.npy')
+        template_dir = ensure_dir(op.join(self.path_or_fail(), 'template'))
+        template_path = op.join(template_dir, 'template.npy')
         np.save(template_path, data[:0])
 
     def can_add(self, data):
@@ -558,15 +560,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
 
 @whatable(add_properties=False)
 class JaggedIndex(object):
-    """Maps keys to segments that can address elements in `JaggedRawStore` instances.
-    Segments can be addressed by key and insertion index.
-    """
-
-    def segments(self):
-        """Returns the list of known segments.
-        May be larger than the number of known keys.
-        """
-        raise NotImplementedError()
+    """Maps keys to index in a jagged store."""
 
     def segment(self, key_over_index):
         """Returns the segment in the index addressed by key_over_index.
@@ -661,8 +655,6 @@ class JaggedSimpleIndex(JaggedIndex):
         self._segments = None
         self._path = path
         # populate indices
-        # N.B. at the moment things are brittle and we can loose index data under certain conditions
-        # FIXME asap
         self.segments()
         self.keys()
 
