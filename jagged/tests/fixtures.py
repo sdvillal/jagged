@@ -6,7 +6,6 @@ import pytest
 
 from functools import partial
 
-from jagged.base import JaggedSimpleIndex, JaggedStore
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.blosc_backend import JaggedByBlosc
 from jagged.h5py_backend import JaggedByH5Py
@@ -46,26 +45,6 @@ def jagged_raw(request, tmpdir):
     dest = tmpdir.join(jr().what().id()).ensure_dir()
     try:
         yield jr, str(dest)
-    finally:
-        dest.remove(ignore_errors=True)
-
-
-@pytest.yield_fixture(params=(JaggedSimpleIndex,), ids=('idx=simple',))
-def index(request, tmpdir):
-    idx = request.param
-    dest = tmpdir.join(idx().what().id()).ensure_dir()
-    try:
-        yield idx, str(dest)
-    finally:
-        dest.remove(ignore_errors=True)
-
-
-@pytest.yield_fixture(params=(JaggedStore,), ids=('store=simple',))
-def store(request, tmpdir):
-    store = request.param
-    dest = tmpdir.join('store').ensure_dir()
-    try:
-        yield store, str(dest)
     finally:
         dest.remove(ignore_errors=True)
 
