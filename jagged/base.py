@@ -81,8 +81,7 @@ class JaggedJournal(object):
         self._numrows += len(data)
         self._numarrays += 1
         with open(self._sizes_file, 'w') as writer:
-            json.dump({'numrows': self._numrows, 'numarrays': self._numarrays},
-                      writer, encoding='utf-8', indent=2)
+            json.dump({'numrows': self._numrows, 'numarrays': self._numarrays}, writer, indent=2)
 
     def _read_sizes(self):
         """Reads the current numrows and numarrays values from persistent storage.
