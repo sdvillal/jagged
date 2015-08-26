@@ -2,6 +2,7 @@
 """A jumble of seemingly useful stuff."""
 from __future__ import unicode_literals
 from itertools import chain
+from contextlib import contextmanager
 import numbers
 import os
 import os.path as op
