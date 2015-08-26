@@ -45,6 +45,7 @@ setup(
                       'bloscpack',
                       'bcolz',
                       'h5py',
-                      'joblib'],
+                      'joblib',
+                      'psutil'],
     tests_require=['pytest'],
 )
