@@ -26,18 +26,12 @@ class JaggedByBlosc(JaggedRawStore):
         self.compressor = compressor
         self._mm = None
         self._writing = None
-        self._bytes_journal = None
+        self._bjournal = None
 
-    def bytes_journal(self):
-        if self._bytes_journal is None:
-            self._bytes_journal = JaggedJournal(op.join(self.path_or_fail(), 'bytes_journal'))
-        return self._bytes_journal
-
-    def what(self):
-        try:
-            return What(self.__class__.__name__, {'compressor': self.compressor()})
-        except TypeError:
-            return What(self.__class__.__name__, {'compressor': self.compressor})
+    def _bytes_journal(self):
+        if self._bjournal is None:
+            self._bjournal = JaggedJournal(op.join(self.path_or_fail(), 'meta', 'bytes_journal'))
+        return self._bjournal
 
     def _compressor(self):
         if not isinstance(self.compressor, BloscCompressor):
@@ -45,6 +39,14 @@ class JaggedByBlosc(JaggedRawStore):
                                               shape=self.shape,
                                               order=self.order)
         return self.compressor
+
+    # --- Custom what() to be available at any circumstance
+
+    def what(self):
+        try:
+            return What(self.__class__.__name__, {'compressor': self.compressor()})
+        except TypeError:
+            return What(self.__class__.__name__, {'compressor': self.compressor})
 
     # --- Write
 
@@ -56,7 +58,7 @@ class JaggedByBlosc(JaggedRawStore):
         compressor = self._compressor()
         compressed = compressor.compress(data)
         self._mm.write(compressed)
-        self.bytes_journal().append(compressed)
+        self._bytes_journal().append(compressed)
 
     # --- Read
 
@@ -75,7 +77,7 @@ class JaggedByBlosc(JaggedRawStore):
         compressor = self._compressor()
         views = []
         for key, order in sorted(keys):
-            base, size = self.bytes_journal().base_size(key)  # cache these segments?
+            base, size = self._bytes_journal().base_size(key)  # cache these segments?
             array = compressor.decompress(self._mm[base:base+size])
             if columns is not None:
                 array = array[:, tuple(columns)]
