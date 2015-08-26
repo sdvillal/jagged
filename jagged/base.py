@@ -172,13 +172,13 @@ class JaggedRawStore(object):
 
     def journal(self):
         if self._journal is None:
-            self._journal = JaggedJournal(op.join(self.path_or_fail(), 'journal'))
+            self._journal = JaggedJournal(op.join(self.path_or_fail(), 'meta', 'journal'))
         return self._journal
 
     # --- Template
 
     def template(self):
-        template_dir = ensure_dir(op.join(self.path_or_fail(), 'template'))
+        template_dir = ensure_dir(op.join(self.path_or_fail(), 'meta', 'template'))
         template_path = op.join(template_dir, 'template.npy')
         if self._template is None:
             if op.isfile(template_path):
@@ -186,7 +186,7 @@ class JaggedRawStore(object):
         return self._template
 
     def _write_template(self, data):
-        template_dir = ensure_dir(op.join(self.path_or_fail(), 'template'))
+        template_dir = ensure_dir(op.join(self.path_or_fail(), 'meta', 'template'))
         template_path = op.join(template_dir, 'template.npy')
         np.save(template_path, data[:0])
 
@@ -272,6 +272,12 @@ class JaggedRawStore(object):
         if self.template() is None:
             self._write_template(data)
         assert self.can_add(data)
+
+        # id log
+        if not op.isfile(op.join(self.path_or_fail(),  'meta', 'whatid.txt')):
+            ensure_dir(op.join(self.path_or_fail(),  'meta'))
+            with open(op.join(self.path_or_fail(), 'meta', 'whatid.txt'), 'w') as writer:
+                writer.write(self.what().id())
 
         # open
         self._open_write(data)
