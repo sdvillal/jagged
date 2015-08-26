@@ -10,6 +10,7 @@
  - All clases are whatami whatables
 """
 from __future__ import absolute_import, unicode_literals, print_function
+from future.utils import bytes_to_native_str
 from abc import ABCMeta
 from array import array
 from functools import partial
