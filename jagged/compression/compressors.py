@@ -4,7 +4,7 @@ from whatami import whatable
 
 try:
     import blosc
-except ImportError:
+except ImportError:  # pragma: no cover
     blosc = None
 
 
@@ -20,7 +20,7 @@ class Compressor(object):
     def decompress(self, cdata):
         raise NotImplementedError()
 
-    def uncompress(self, cdata):
+    def uncompress(self, cdata):  # pragma: no cover
         return self.decompress(cdata)
 
 
