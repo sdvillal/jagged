@@ -112,7 +112,7 @@ class JaggedJournal(object):
 
     def _read_lengths(self):
         """Reads the lengths from persistent storage, if it does not exist, returns an empty array."""
-        lengths = array(b'l')
+        lengths = array(bytes_to_native_str(b'l'))
         if op.isfile(self._lengths_file):
             _read_full_file(lengths, self._lengths_file)
         return lengths
