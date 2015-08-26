@@ -21,9 +21,10 @@ class JaggedByBlosc(JaggedRawStore):
     # as expected after the columnar benchmarks with raw
     # python-blosc
 
-    def __init__(self, path=None, journal=None, compressor=BloscCompressor):
+    def __init__(self, path=None, journal=None, compressor=BloscCompressor, mmap=False):
         super(JaggedByBlosc, self).__init__(path, journal=journal)
         self.compressor = compressor
+        self.mmap = mmap
         self._mm = None
         self._writing = None
         self._bjournal = None
@@ -64,8 +65,15 @@ class JaggedByBlosc(JaggedRawStore):
 
     def _open_read(self):
         self._mm = open(op.join(self.path_or_fail(), 'data'), 'r')
-        self._mm = mmap(self._mm.fileno(), 0, access=ACCESS_READ)
+        if self.mmap:
+            self._mm = mmap(self._mm.fileno(), 0, access=ACCESS_READ)
         self._writing = False
+
+    def _read_segment(self, base, size):
+        if self.mmap:
+            return self._mm[base:base+size]
+        self._mm.seek(base)
+        return self._mm.read(size)
 
     def _get_views(self, keys, columns):
 
@@ -78,7 +86,7 @@ class JaggedByBlosc(JaggedRawStore):
         views = []
         for key, order in sorted(keys):
             base, size = self._bytes_journal().base_size(key)  # cache these segments?
-            array = compressor.decompress(self._mm[base:base+size])
+            array = compressor.decompress(self._read_segment(base, size))
             if columns is not None:
                 array = array[:, tuple(columns)]
             views.append((array, order))
