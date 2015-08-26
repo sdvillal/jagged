@@ -9,6 +9,7 @@ from functools import partial
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.blosc_backend import JaggedByBlosc
 from jagged.h5py_backend import JaggedByH5Py
+from jagged.joblib_backend import JaggedByJoblib
 from jagged.mmap_backend import JaggedByMemMap
 from jagged.npy_backend import JaggedByNPY
 from jagged.bloscpack_backend import JaggedByBloscpack
@@ -32,7 +33,8 @@ RAW_STORES.extend([
     ('jr=npy', JaggedByNPY),
     ('jr=blp', JaggedByBloscpack),
     ('jr=blosc', JaggedByBlosc),
-    ('jr=pickle', JaggedByPickle)
+    ('jr=pickle', JaggedByPickle),
+    ('jr=joblib', JaggedByJoblib),
 ])
 
 stores = [store for _, store in RAW_STORES]

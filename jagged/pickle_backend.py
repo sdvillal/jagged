@@ -22,6 +22,15 @@ class JaggedByPickle(JaggedRawStore):
 
     # --- Pickles
 
+    def _dump(self, path):
+        with gzip.open(path, 'wb') if self.compress else open(path, 'wb') as writer:
+            pickle.dump(self._cache, writer, protocol=2)
+            # protocol=2 instead of highest to maintain py2 compat of the store
+
+    def _load(self, path):
+        with gzip.open(path, 'rb') if self.compress else open(path, 'rb') as reader:
+            self._cache = pickle.load(reader)
+
     def _pickle_num(self, index):
         return index // self.arrays_per_chunk
 
@@ -31,18 +40,13 @@ class JaggedByPickle(JaggedRawStore):
 
     def _save_pickle(self):
         if self.is_writing:
-            path = self._pickle_file(self.narrays)
-            with gzip.open(path, 'wb') if self.compress else open(path, 'wb') as writer:
-                pickle.dump(self._cache, writer, protocol=2)
-                # protocol=2 instead of highest to maintain py2 compat of the store
+            self._dump(self._pickle_file(self.narrays))
 
     def _read_pickle(self, index):
         pickle_num = self._pickle_num(index)
         if self._cached_pickle_num != pickle_num:
             try:
-                path = self._pickle_file(index)
-                with gzip.open(path, 'rb') if self.compress else open(path, 'rb') as reader:
-                    self._cache = pickle.load(reader)
+                self._load(self._pickle_file(index))
             except IOError:
                 self._cache = []
             self._cached_pickle_num = pickle_num
