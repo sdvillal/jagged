@@ -1,8 +1,8 @@
 jagged
 ======
 
-Efficient storage of same-type, uneven-size numpy arrays
---------------------------------------------------------
+Efficient storage of same-type, uneven-size arrays
+--------------------------------------------------
 
 |Pypi Version| |Build Status| |Coverage Status| |Scrutinizer Status|
 
@@ -13,7 +13,40 @@ columns but varying number of rows. Examples of such datasets for which
 animal behavior snippets) and large collections of molecules (represented
 as varying length strings).
 
-Although rapidly changing, *jagged* already provides these storage backends
+Showcase
+--------
+
+.. code:: python
+    import os.path as op
+    import numpy as np
+    from jagged.mmap_backend import JaggedByMemmap
+
+    # A Jagged instance is all you need
+    jagged = JaggedByMemmap(op.expanduser(path='~/jagged-example/mmap'))
+
+    # Generate a random dataset
+    rng = np.random.RandomState(0)
+    max_length = 2000
+    num_arrays = 100
+    originals = [rng.randn(rng.randint(0, max_length), 50)
+                 for _ in range(num_arrays))
+
+    # Add these to the store (context is usually optional but recommended)
+    with jagged:
+        indices = map(jagged.append, originals)
+
+    # What do we have in store?
+    print('Number of arrays: %d, number of rows: %d' % (jbmm.narrays, jbmm.nrows))
+    print('Jagged shape=%r, dtype=%r, order=%r' % (jagged.shape, jagged.dtype, jagged.order))
+
+    # Check roundtrip
+    roundtripped = jagged.get(indices)
+    print('The store has %d arrays')
+
+
+
+
+Although rapidly changing, *jagged* already provides the following storage backends
 (all accessed by a simple unifying API) that can be considered as working
 and stable.
 
