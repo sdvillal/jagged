@@ -17,6 +17,7 @@ Showcase
 --------
 
 .. code:: python
+
     import os.path as op
     import numpy as np
     from jagged.mmap_backend import JaggedByMemmap
