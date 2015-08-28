@@ -21,10 +21,9 @@ class JaggedByBlosc(JaggedRawStore):
     # as expected after the columnar benchmarks with raw
     # python-blosc
 
-    def __init__(self, path=None, journal=None, compressor=BloscCompressor, mmap=False):
+    def __init__(self, path=None, journal=None, compressor=BloscCompressor):
         super(JaggedByBlosc, self).__init__(path, journal=journal)
         self.compressor = compressor
-        self.mmap = mmap
         self._mm = None
         self._writing = None
         self._bjournal = None
@@ -65,8 +64,7 @@ class JaggedByBlosc(JaggedRawStore):
 
     def _open_read(self):
         self._mm = open(op.join(self.path_or_fail(), 'data'), 'r')
-        if self.mmap:
-            self._mm = mmap(self._mm.fileno(), 0, access=ACCESS_READ)
+        self._mm = mmap(self._mm.fileno(), 0, access=ACCESS_READ)
         self._writing = False
 
     def _read_segment(self, base, size):
