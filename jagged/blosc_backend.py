@@ -11,15 +11,8 @@ from whatami import What
 
 class JaggedByBlosc(JaggedRawStore):
 
-    # Memmapped TODO should allow to just seek and read too
+    # Memmapped
     # Not chunked - hope to keep using bcolz for that
-    #
-    # Just to check why bcolz is not giving the compression
-    # we see in the benchmarks with raw python-blosc
-    #
-    # Also to investigate why ctable is not working as well
-    # as expected after the columnar benchmarks with raw
-    # python-blosc
 
     def __init__(self, path=None, journal=None, compressor=BloscCompressor):
         super(JaggedByBlosc, self).__init__(path, journal=journal)
@@ -68,10 +61,7 @@ class JaggedByBlosc(JaggedRawStore):
         self._writing = False
 
     def _read_segment(self, base, size):
-        if self.mmap:
-            return self._mm[base:base+size]
-        self._mm.seek(base)
-        return self._mm.read(size)
+        return self._mm[base:base+size]
 
     def _get_views(self, keys, columns):
 
