@@ -121,15 +121,21 @@ that can be considered as working and stable. Other backends are planned.
 +-------------------+------+-------+--------+------+-----+------+------+
 
 
-- comp: can be compressed
-- chunk: can be chunked
-- column: stores columns of the array contiguously (can be easily implemented by using a store per column)
-- mmap: can open a memmap to the data
-- lin: can retrieve any row without the need to retrieve the whole
-       array it contains it
-- lazy: the arrays are not fetched immediatly; this can mean also that they can be managed
-        as virtual-memory by the OS (JaggedByMemMap only)
-- cont: retrieved arrays can be forced to lie in contiguous memory segments
+- comp:
+  can be compressed
+- chunk:
+  can be chunked
+- column:
+  stores columns of the array contiguously (can be easily implemented by using a store per column)
+- mmap:
+  can open a memmap to the data
+- lin:
+  can retrieve any row without the need to retrieve the whole array it contains it
+- lazy:
+  the arrays are not fetched immediatly; this can mean also that they can be managed
+  as virtual-memory by the OS (JaggedByMemMap only)
+- cont:
+  retrieved arrays can be forced to lie in contiguous memory segments
 
 Benchmarks
 ----------
