@@ -8,7 +8,7 @@ Efficient storage of same-type, uneven-size arrays
 
 *Jagged* is an ongoing amateur project exploring the storage panorama
 for datasets containing (large amounts of) arrays with the same type
-and number of columns but varying number of rows. Examples of such
+and number of columns, but varying number of rows. Examples of such
 datasets for which *jagged* has been used are collections of multivariate
 timeseries (short animal behaviour snippets) and collections of molecules
 (represented as varying length strings).
@@ -35,9 +35,8 @@ At the moment, everything is simple algorithms implemented in pure python.
 Installation
 ------------
 
-It should suffice to use pip:
+It should suffice to use pip::
 
-.. code:: sh
     pip install jagged
 
 Jagged stores builds on top of several high quality python libraries: numpy, blosc,
