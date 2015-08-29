@@ -24,7 +24,7 @@ It should suffice to use pip::
 
     pip install jagged
 
-Jagged stores builds on top of several high quality python libraries: numpy, blosc,
+Jagged stores build on top of several high quality python libraries: numpy, blosc,
 bloscpack, bcolz and joblib. It also needs whatami and python-future.
 Testing relies on pytest (you need to install all dependencies to test at the moment,
 this will change soon).
