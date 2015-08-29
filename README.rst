@@ -17,21 +17,6 @@ Jagged aims to help analyzing data in the laptop and the cluster, in batch
 or interactively, providing a very lightweight store. Jagged provides fast
 retrieval of array subsets for many-GB datasets containing millions of rows.
 
-By-design constraints
----------------------
-
-Focus is on fast retrieval of arbitrary batch queries.
-
-Jagged stores are append only.
-
-There is no transaction, replication or distribution.
-It is all files in your local or network disks.
-
-Not important efforts have been given yet to optimize
-(although some backends work quite smoothly).
-
-At the moment, everything is simple algorithms implemented in pure python.
-
 Installation
 ------------
 
@@ -143,6 +128,22 @@ Benchmarks
 What backend and parameters work best depends on whether your data is compressible or not and the
 sizes of the arrays. We have a good idea of what works best for our data and are working at
 providing a benchmarking framework. Find here a preview_.
+
+
+By-design constraints
+---------------------
+
+Focus is on fast retrieval of arbitrary batch queries.
+
+Jagged stores are append only.
+
+There is no transaction, replication or distribution.
+It is all files in your local or network disks.
+
+Not important efforts have been given yet to optimize
+(although some backends work quite smoothly).
+
+At the moment, everything is simple algorithms implemented in pure python.
 
 
 .. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
