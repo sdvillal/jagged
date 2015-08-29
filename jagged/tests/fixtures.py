@@ -32,8 +32,7 @@ for contiguity in ('read', 'write', None, 'auto'):
 RAW_STORES.extend([
     ('jr=npy', JaggedByNPY),
     ('jr=blp', JaggedByBloscpack),
-    ('jr=blosc-nomm', partial(JaggedByBlosc, mmap=False)),
-    ('jr=blosc-mm', partial(JaggedByBlosc, mmap=True)),
+    ('jr=blosc-mm', JaggedByBlosc),
     ('jr=pickle', JaggedByPickle),
     ('jr=joblib', JaggedByJoblib),
 ])

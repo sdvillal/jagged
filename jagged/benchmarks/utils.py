@@ -92,7 +92,7 @@ def du(path):
     return int(subprocess.check_output(['du', '-s', '-L', '-B1', path]).split()[0].decode('utf-8'))
 
 
-def drop_caches(path, drop_level=3, verbose=False):
+def drop_caches(path, drop_level=3, max_size='1000G', verbose=False):
     #
     # Some light reading
     #   http://www.linuxatemyram.com/play.html
@@ -103,10 +103,10 @@ def drop_caches(path, drop_level=3, verbose=False):
     # fincore
     #   yaourt -S --noconfirm perl-file-sharedir-install
     #   yaourt -S --noconfirm fincore
-    # To drop system caches, one needs root; an option, add the program
-    # to sudoers so no pass is required.
+    # To drop system caches, one needs root;
+    # an option, add the program to sudoers so no pass is required.
     #
-    if 0 != os.system('vmtouch -e -f -q "%s"' % path):
+    if 0 != os.system('vmtouch -e -f -q -m %s "%s"' % (max_size, path)):
         if os.geteuid() == 0:
             os.system('echo %d > /proc/sys/vm/drop_caches' % drop_level)
             if verbose:
