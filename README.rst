@@ -37,9 +37,8 @@ Installation
 
 It should suffice to use pip:
 
-```sh
-pip install jagged
-```
+.. code:: sh
+    pip install jagged
 
 Jagged stores builds on top of several high quality python libraries: numpy, blosc,
 bloscpack, bcolz and joblib. It also needs whatami and python-future.
@@ -125,16 +124,13 @@ that can be considered as working and stable. Other backends are planned.
 
 - comp: can be compressed
 - chunk: can be chunked
-- column: stores columns of the array contiguously
-          (can be easily implemented by using a store per column)
+- column: stores columns of the array contiguously (can be easily implemented by using a store per column)
 - mmap: can open a memmap to the data
 - lin: can retrieve any row without the need to retrieve the whole
        array it contains it
-- lazy: the arrays are not fetched immediatly; this can mean also
-        that they can be managed as virtual-memory by the OS
-        (JaggedByMemMap only)
-- cont: retrieved arrays can be forced to lie in contiguous
-        memory segments
+- lazy: the arrays are not fetched immediatly; this can mean also that they can be managed
+        as virtual-memory by the OS (JaggedByMemMap only)
+- cont: retrieved arrays can be forced to lie in contiguous memory segments
 
 Benchmarks
 ----------
@@ -143,7 +139,6 @@ What backend and parameters work best depends on whether your data is compressib
 sizes of the arrays. We have a good idea of what works best for our data and are working at
 providing a benchmarking framework. Find here a preview_.
 
----------------------
 
 .. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
    :target: http://badge.fury.io/py/jagged
