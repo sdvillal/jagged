@@ -143,8 +143,8 @@ What backend and parameters work best depends on whether your data is compressib
 sizes of the arrays. We have a good idea of what works best for our data and are working at
 providing a benchmarking framework. Find here a preview_.
 
-
 ---------------------
+
 .. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
    :target: http://badge.fury.io/py/jagged
 .. |Build Status| image:: https://travis-ci.org/sdvillal/jagged.svg?branch=master
