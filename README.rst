@@ -27,7 +27,8 @@ It should suffice to use pip::
 Jagged stores build on top of several high quality python libraries: numpy, blosc,
 bloscpack, bcolz and joblib. It also needs whatami and python-future.
 Testing relies on pytest (you need to install all dependencies to test at the moment,
-this will change soon).
+this will change soon). Getting the right combination for blosc, bloscpack and
+bcolz can be a challenge (but worth the effort).
 
 
 Showcase
@@ -121,6 +122,7 @@ that can be considered as working and stable. Other backends are planned.
   as virtual-memory by the OS (JaggedByMemMap only)
 - cont:
   retrieved arrays can be forced to lie in contiguous memory segments
+
 
 Benchmarks
 ----------
