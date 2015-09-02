@@ -31,7 +31,7 @@ this will change soon).
 
 Getting the right combination for blosc, python-blosc, bcolz and bloscpack can be a challenge
 (but worth the effort). At the moment (2015/09/02), we recommend using the latest released
-versions of c-blosc (1.7.0) in combination with the latest release of python-blosc (1.2.7)
+versions of c-blosc (1.7.0) in combination with the latest releases of python-blosc (1.2.7)
 and bloscpack (0.9.0).
 
 Jagged should run in python 2.7+ and 3.4+. At the moment it has been tested only on linux,
@@ -251,8 +251,8 @@ Links
 This neat blogpost_ from Matthew Rocklin is highly recommended, as it delivers
 the promised *"vocabulary to talk about efficient tabular storage"*. Add perhaps
 "blocked" (as in "compression is done in cache-friendly sized blocks") and
-"chunked" (as in "retrieval is done in I/O-friendly sized chunks"). The castra_ project
-is worth a look.
+"chunked" (as in "retrieval is done in I/O-friendly sized chunks") to the lexicon.
+The castra_ project is worth a look.
 
 
 .. _Jagged: https://github.com/sdvillal/jagged
