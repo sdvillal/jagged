@@ -49,8 +49,18 @@ Showcase
 --------
 
 Using jagged is simple. There are different implementations that provide
-two basic methods: *append* adds a new array to the store, *get* retrieves
-collections of arrays identified by their insertion order in the store.
+two basic methods: **append** adds a new array to the store, **get** retrieves
+collections of arrays identified by their insertion order in the store. Usually
+the lifecycle of a jagged store is also simple: there is no explicit open,
+append and get calls can be interleaved at will and the only needed action
+to warrant consistency is to close after write, which can be achieved by calling
+**close**, by calling *get* or by using a with statement with the provided
+context manager.
+
+This is a `real life`_ small example combining jagged with indices and queries
+over real data.
+
+Another synthetic example follows:
 
 .. code:: python
 
@@ -254,6 +264,7 @@ is worth a look.
    :target: http://codecov.io/github/sdvillal/jagged?branch=master
 .. |Scrutinizer Status| image:: https://scrutinizer-ci.com/g/sdvillal/jagged/badges/quality-score.png?b=master
    :target: https://scrutinizer-ci.com/g/sdvillal/jagged/?branch=master
+.. _real life: https://github.com/strawlab/strawlab-examples/blob/master/strawlab_examples/euroscipy/euroscipy_example.py
 .. _preview: https://github.com/sdvillal/strawlab-examples/tree/master/strawlab_examples/benchmarks
 .. _numpy: http://www.numpy.org/
 .. _whatami: http://www.github.com/sdvillal/whatami
