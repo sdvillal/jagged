@@ -24,18 +24,16 @@ All the requirements are pip-installable and listed in in pypi.
 
 Jagged needs numpy_, whatami_ and python-future_.
 
-Jagged stores build on top of several high quality python libraries: c-blosc_, python-blosc_,
-bloscpack_, bcolz_ and joblib_ (some of these are optional and needed only if you use some concrete
-backends). Testing relies on pytest_ (to test you need to install all dependencies at the moment,
-this will change soon).
+Jagged stores build on top of several optional high quality python libraries: c-blosc_, python-blosc_,
+bloscpack_, bcolz_ and joblib_. Testing relies on pytest_.
 
 Getting the right combination for blosc, python-blosc, bcolz and bloscpack can be a challenge
 (but worth the effort). At the moment (2015/09/02), we recommend using the latest released
 versions of c-blosc (1.7.0) in combination with the latest releases of python-blosc (1.2.7)
 and bloscpack (0.9.0).
 
-Jagged should run in python 2.7+ and 3.4+. At the moment it has been tested only on linux,
-but it should work on mac and windows as well.
+Jagged runs in python 2.7+ and 3.4+. At the moment it has been tested only on linux, but it should
+work on mac and windows as well.
 
 
 Installation

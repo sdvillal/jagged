@@ -6,22 +6,16 @@ import pytest
 
 from functools import partial
 
-from jagged.bcolz_backend import JaggedByCarray
-from jagged.blosc_backend import JaggedByBlosc
-from jagged.h5py_backend import JaggedByH5Py
-from jagged.joblib_backend import JaggedByJoblib
-from jagged.mmap_backend import JaggedByMemMap
-from jagged.npy_backend import JaggedByNPY
-from jagged.bloscpack_backend import JaggedByBloscpack
-from jagged.pickle_backend import JaggedByPickle
+from jagged import JaggedByCarray, JaggedByBlosc, JaggedByH5Py, JaggedByJoblib, \
+    JaggedByMemMap, JaggedByNPY, JaggedByBloscpack, JaggedByPickle
 
 RAW_STORES = []
 
 LINEAR_RAW_STORES = (
     ('jr=carray', JaggedByCarray),
-    ('jr=carraychunks', partial(JaggedByCarray, chunklen=100)),
+    ('jr=carraychunks', partial(JaggedByCarray, chunklen=100) if JaggedByCarray else None),
     ('jr=h5py', JaggedByH5Py),
-    ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100)),
+    ('jr=h5pychunks', partial(JaggedByH5Py, chunklen=100) if JaggedByCarray else None),
     ('jr=mmap', JaggedByMemMap),
 )
 
@@ -37,7 +31,9 @@ RAW_STORES.extend([
     ('jr=joblib', JaggedByJoblib),
 ])
 
-stores = [store for _, store in RAW_STORES]
+# pytest.importorskip won't cut it here...
+
+stores = [pytest.mark.skipif(store is None, 'backend not available') for _, store in RAW_STORES]
 names = [name for name, _ in RAW_STORES]
 
 
