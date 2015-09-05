@@ -33,7 +33,7 @@ RAW_STORES.extend([
 
 # pytest.importorskip won't cut it here...
 
-stores = [pytest.mark.skipif(store is None, 'backend not available') for _, store in RAW_STORES]
+stores = [pytest.mark.skipif(store is None, reason='backend not available') for _, store in RAW_STORES]
 names = [name for name, _ in RAW_STORES]
 
 
