@@ -114,7 +114,6 @@ class JaggedByPickle(JaggedRawStore):
         self._writing = None
 
 #
-# We let pandas decide how to pickle
 # In general it would use protocol 2, so pickles can be read also in py2
 # We can be as clever as we want with caches: many read caches with LRU, one write cache...
 #

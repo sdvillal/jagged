@@ -38,14 +38,15 @@ setup(
     ],
     install_requires=['future',
                       'numpy',
-                      'pandas',
                       'whatami>=4.0.0',
-                      'toolz',
-                      'blosc',
-                      'bloscpack',
-                      'bcolz',
-                      'h5py',
-                      'joblib',
-                      'psutil'],
+                      'toolz'],
     tests_require=['pytest'],
+    extras_require={
+        'blosc': ['blosc'],
+        'bloscpack': ['bloscpack'],
+        'bcolz': ['bcolz'],
+        'h5py': ['h5py'],
+        'joblib': ['joblib'],
+        'benchmarks': ['psutil']
+    }
 )
