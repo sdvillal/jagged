@@ -33,7 +33,16 @@ RAW_STORES.extend([
 
 # pytest.importorskip won't cut it here...
 
-stores = [pytest.mark.skipif(store is None, reason='backend not available') for _, store in RAW_STORES]
+
+def store_skip(store):  # pragma: no cover
+    """Skips a store if its dependencies are not available."""
+    name, store = store
+    if store is None:
+        return pytest.mark.skipif(name, reason='the numpy plugin requires both pandas and joblib')
+    return store
+
+
+stores = map(store_skip, RAW_STORES)
 names = [name for name, _ in RAW_STORES]
 
 
