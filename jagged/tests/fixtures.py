@@ -42,7 +42,7 @@ def store_skip(store):  # pragma: no cover
     return store
 
 
-stores = map(store_skip, RAW_STORES)
+stores = list(map(store_skip, RAW_STORES))
 names = [name for name, _ in RAW_STORES]
 
 
