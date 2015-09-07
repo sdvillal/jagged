@@ -6,7 +6,7 @@ import pytest
 
 from functools import partial
 
-from jagged import JaggedByCarray, JaggedByBlosc, JaggedByH5Py, JaggedByJoblib, \
+from jagged import JaggedByCarray, JaggedByCompression, JaggedByH5Py, JaggedByJoblib, \
     JaggedByMemMap, JaggedByNPY, JaggedByBloscpack, JaggedByPickle
 
 RAW_STORES = []
@@ -26,7 +26,7 @@ for contiguity in ('read', 'write', None, 'auto'):
 RAW_STORES.extend([
     ('jr=npy', JaggedByNPY),
     ('jr=blp', JaggedByBloscpack),
-    ('jr=blosc-mm', JaggedByBlosc),
+    ('jr=blosc-mm', JaggedByCompression),
     ('jr=pickle', JaggedByPickle),
     ('jr=joblib', JaggedByJoblib),
 ])

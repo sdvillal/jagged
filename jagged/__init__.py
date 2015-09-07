@@ -6,7 +6,7 @@ from __future__ import absolute_import
 from .mmap_backend import JaggedByMemMap
 
 try:
-    from .blosc_backend import JaggedByBlosc
+    from .mmapcompressed_backend import JaggedByCompression
 except ImportError:  # pragma: no cover
     JaggedByBlosc = None
 

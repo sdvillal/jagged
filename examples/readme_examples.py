@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import tempfile
 from jagged.mmap_backend import JaggedByMemMap
-from jagged.blosc_backend import JaggedByBlosc
+from jagged.mmapcompressed_backend import JaggedByCompression
 
 # A Jagged instance is all you need
 mmap_dir = tempfile.mkdtemp('mmap')
@@ -89,7 +89,7 @@ print('Roundtrip checks for lazy dataframes pass')
 
 # Jagged stores can be populated from other jagged stores
 blosc_dir = tempfile.mkdtemp('mmap')
-jbb = JaggedByBlosc(path=blosc_dir)
+jbb = JaggedByCompression(path=blosc_dir)
 print('Saving compressed (although these data are not compressable)...')
 jbb.append_from(jagged)
 for a_from_mmap, a_from_blosc in zip(jbb, jagged):

@@ -15,9 +15,9 @@ import pandas as pd
 
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.benchmarks.utils import sync, available_ram, timestr, drop_caches, du, hostname
-from jagged.blosc_backend import JaggedByBlosc
+from jagged.mmapcompressed_backend import JaggedByCompression
 from jagged.bloscpack_backend import JaggedByBloscpack
-from jagged.compression.compressors import BloscCompressor
+from jagged.compression.compressors import JaggedCompressorByBlosc
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.misc import ensure_dir
 from jagged.mmap_backend import JaggedByMemMap
@@ -244,8 +244,8 @@ if __name__ == '__main__':
         JaggedByBloscpack,
 
         # blosc
-        partial(JaggedByBlosc, compressor=BloscCompressor(cname='lz4hc', level=5, shuffle=True)),
-        partial(JaggedByBlosc, compressor=BloscCompressor(cname='lz4hc', level=5, shuffle=False)),
+        partial(JaggedByCompression, compressor=JaggedCompressorByBlosc(cname='lz4hc', clevel=5, shuffle=True)),
+        partial(JaggedByCompression, compressor=JaggedCompressorByBlosc(cname='lz4hc', clevel=5, shuffle=False)),
 
         # mmap
         partial(JaggedByMemMap, contiguity='auto', autoviews=True),
