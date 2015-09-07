@@ -30,15 +30,16 @@ class Compressor(object):
 
 @contextmanager
 def _blosc_nthreads(n_threads):
-    old_nthreads = blosc.set_nthreads(n_threads)
-    yield old_nthreads
-    if old_nthreads != n_threads:
-        blosc.set_nthreads(old_nthreads)
+    if n_threads is None:
+        yield
+    else:
+        old_nthreads = blosc.set_nthreads(n_threads)
+        yield
+        if old_nthreads != n_threads:
+            blosc.set_nthreads(old_nthreads)
 
 
 class BloscCompressor(Compressor):
-
-    # This has quite an overhead beyond compression ATM
 
     def __init__(self, shuffle=True, level=5, cname='lz4hc', n_threads=1, dtype=None, shape=None, order=None):
         super(BloscCompressor, self).__init__()
