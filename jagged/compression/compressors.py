@@ -52,14 +52,15 @@ class BloscCompressor(Compressor):
 
     def compress(self, x):
         with _blosc_nthreads(self.n_threads):
-            x = np.ascontiguousarray(x)  # LOOK AT THIS
-            shape, dtype, order = x.shape, x.dtype, ('F' if np.isfortran(x) else 'C')
+            order = 'F' if np.isfortran(x) else 'C'
+            x = np.require(x, requirements=[order])  # beware, can make a copy
+            shape, dtype = x.shape, x.dtype
             if self._dtype is None:
                 self._shape, self._dtype, self._order = shape, dtype, order
             else:
                 assert order == self._order
                 assert dtype == self._dtype
-                assert len(self._shape) == 1 or shape[1] == self._shape[1]
+                assert len(self._shape) == 1 or shape[1:] == self._shape[1:]
             return blosc.compress_ptr(x.__array_interface__['data'][0],
                                       x.size, x.dtype.itemsize,
                                       shuffle=self.shuffle, cname=self.cname, clevel=self.level)
@@ -67,9 +68,7 @@ class BloscCompressor(Compressor):
     def decompress(self, cx):
         with _blosc_nthreads(self.n_threads):
             x = blosc.decompress(cx)
-            x = np.frombuffer(x, dtype=self._dtype)  # beware gets an immutable array
-            if self._order == 'F':
-                np.asfortranarray(x)  # correct? makes copy and screwes up?
+            x = np.frombuffer(x, dtype=self._dtype)  # beware, immutable array
             if len(self._shape) > 1:
-                x = x.reshape(-1, self._shape[1])
+                x = x.reshape(-1, *self._shape[1:], order=self._order)
             return x
