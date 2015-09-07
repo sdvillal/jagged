@@ -15,6 +15,7 @@ import pandas as pd
 import humanize
 
 from jagged.benchmarks.utils import hostname, drop_caches
+from jagged.compression.compressors import JaggedCompressorByBlosc
 from jagged.misc import ensure_dir
 from whatami import whatable, what2id, What, id2what, whatid2columns
 
@@ -48,24 +49,13 @@ class CompressionStatsCollector(object):
         self._rtimes = defaultdict(lambda: array(b'f'))
         # item kinds
         if item_getter is None:
-            if isinstance(compressor, (BloscCompressor, DiffCompressor)):
-                def item_getter(x):
-                    return x.values
-            else:
-                def item_getter(x):
-                    return x.values.tobytes()
+            def item_getter(x):
+                return x.values
         if size_getter is None:
-            if isinstance(compressor, (BloscCompressor, DiffCompressor)):
-                def size_getter(x):
-                    return x.nbytes
-            else:
-                size_getter = len
+            def size_getter(x):
+                return x.nbytes
         if comparer is None:
-            if isinstance(compressor, (BloscCompressor, DiffCompressor)):
-                comparer = array_nan_equal
-            else:
-                def comparer(x, y):
-                    return x == y
+            comparer = array_nan_equal
         self._item_getter = item_getter
         self._size_getter = size_getter
         self._comparer = comparer
@@ -255,7 +245,7 @@ class CompressionStatsCollector(object):
 
 def bench_compressibility(sdfs,
                           chunk_size=100,
-                          compressor=BloscCompressor(cname='lz4hc', shuffle=True)):
+                          compressor=JaggedCompressorByBlosc(cname='lz4hc', shuffle=True)):
 
     # Collect stats for individual vs larger blocks compressability
     individual_stats = CompressionStatsCollector(compressor)
@@ -286,14 +276,10 @@ class CompressionBenchManager(object):
 
     def run_bench(self):
         compressors = (
-            BloscCompressor(cname='lz4hc', shuffle=True),
-            BloscCompressor(cname='lz4hc', shuffle=False),
-            BloscCompressor(cname='blosclz', shuffle=True),
-            BloscCompressor(cname='blosclz', shuffle=False),
-            DiffCompressor(cname='lz4hc', shuffle=True),
-            DiffCompressor(cname='lz4hc', shuffle=False),
-            DiffCompressor(cname='blosclz', shuffle=True),
-            DiffCompressor(cname='blosclz', shuffle=False),
+            JaggedCompressorByBlosc(cname='lz4hc', shuffle=True),
+            JaggedCompressorByBlosc(cname='lz4hc', shuffle=False),
+            JaggedCompressorByBlosc(cname='blosclz', shuffle=True),
+            JaggedCompressorByBlosc(cname='blosclz', shuffle=False),
         )
 
         dataset_paths = MITFA_RELEASE_PATH, RNAi_RELEASE_PATH
