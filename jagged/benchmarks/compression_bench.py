@@ -229,7 +229,7 @@ class CompressionStatsCollector(object):
         # Get the names
         if names is None:
             names = self.names()
-        elif isinstance(names, (str, str3)):
+        elif isinstance(names, str):
             names = [names]
 
         # Invert the names set

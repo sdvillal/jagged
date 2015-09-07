@@ -48,6 +48,6 @@ setup(
         'h5py': ['h5py'],
         'joblib': ['joblib'],
         'lz4': ['lz4'],
-        'benchmarks': ['psutil']
+        'benchmarks': ['psutil', 'pandas', 'humanize']
     }
 )
