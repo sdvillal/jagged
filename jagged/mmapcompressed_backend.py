@@ -5,17 +5,17 @@ import os.path as op
 from future.builtins import range
 
 from jagged.base import JaggedRawStore, JaggedJournal
-from jagged.compression.compressors import BloscCompressor
+from jagged.compression.compressors import JaggedCompressorByBlosc
 from whatami import What
 
 
-class JaggedByBlosc(JaggedRawStore):
+class JaggedByCompression(JaggedRawStore):
 
     # Memmapped
     # Not chunked - hope to keep using bcolz for that
 
-    def __init__(self, path=None, journal=None, compressor=BloscCompressor):
-        super(JaggedByBlosc, self).__init__(path, journal=journal)
+    def __init__(self, path=None, journal=None, compressor=JaggedCompressorByBlosc):
+        super(JaggedByCompression, self).__init__(path, journal=journal)
         self.compressor = compressor
         self._mm = None
         self._writing = None
@@ -27,7 +27,7 @@ class JaggedByBlosc(JaggedRawStore):
         return self._bjournal
 
     def _compressor(self):
-        if not isinstance(self.compressor, BloscCompressor):
+        if not isinstance(self.compressor, JaggedCompressorByBlosc):
             self.compressor = self.compressor(dtype=self.dtype,
                                               shape=self.shape,
                                               order=self.order)
