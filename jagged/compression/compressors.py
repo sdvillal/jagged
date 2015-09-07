@@ -389,12 +389,14 @@ def cratio(x, compressor, check_roundtrip=True):
 if __name__ == '__main__':
 
     nr = 10000
-    compressibility = 0
+    compressibility = 1
     with_noise = True
 
     if compressibility == 0:  # this should not be very compressible, in any case...
         x = np.random.uniform(size=nr)
-    elif compressibility == 1:  # floats are not very compressible, unless we precondition...
+    elif compressibility == 1:  # floats are not very compressible with these tools, unless we precondition...
+                                # a simple linear regression would do though
+                                # and then we could upper-bound by precision spec and compress the residuals...
         x = np.linspace(0, nr, nr, dtype=np.float32)
     else:  # this should compress good, specially with preconditioning
         x = np.arange(nr)
