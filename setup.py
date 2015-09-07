@@ -47,6 +47,7 @@ setup(
         'bcolz': ['bcolz'],
         'h5py': ['h5py'],
         'joblib': ['joblib'],
+        'lz4': ['lz4'],
         'benchmarks': ['psutil']
     }
 )
