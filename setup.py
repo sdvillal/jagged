@@ -14,7 +14,7 @@ import jagged
 setup(
     name='jagged',
     license='BSD 3 clause',
-    description='Simple tricks for efficient loading or merging collections of unevenly sized elements',
+    description='Fast storage for collections of same-type, uneven-size arrays',
     long_description=open('README.rst').read().replace('|Build Status| |Coverage Status| |Scrutinizer Status|', ''),
     version=jagged.__version__,
     url='https://github.com/sdvillal/jagged',
@@ -48,6 +48,7 @@ setup(
         'h5py': ['h5py'],
         'joblib': ['joblib'],
         'lz4': ['lz4'],
+        'bitshuffle': ['bitshuffle'],
         'benchmarks': ['psutil', 'pandas', 'humanize']
     }
 )

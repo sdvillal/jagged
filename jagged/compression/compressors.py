@@ -2,6 +2,7 @@
 """Compress and decompress collections of different length arrays."""
 from __future__ import division
 from contextlib import contextmanager
+from timeit import timeit
 
 import numpy as np
 
@@ -28,6 +29,11 @@ try:
     import zstd
 except ImportError:  # pragma: no cover
     zstd = None
+
+try:
+    import bitshuffle
+except ImportError:  # pragma: no cover
+    bitshuffle = None
 
 
 # --- Jagged compressors API
@@ -359,17 +365,32 @@ class JaggedCompressorWithDiff(JaggedCompressor):
         xdiff[1:] = np.diff(x, axis=0)
         return self.compressor.compress(xdiff)
 
-    def _compress_hook(self, x):
-        raise NotImplementedError()
-
     def decompress(self, cx, dest=None):
         x = self.compressor.decompress(cx, dest=dest)
         x = np.require(x, requirements=['w'])
         x[1:] = np.cumsum(x[1:], axis=0) + x[0]
         return x
 
-    def _decompress_hook(self, cx, dest=None):
-        raise NotImplementedError()
+
+# --- Bitshuffled compressor
+
+if bitshuffle:
+
+    class JaggedCompressorWithBitshuffle(JaggedCompressor):
+
+        def __init__(self, compressor=JaggedCompressorByZLIB, dtype=None, shape=None, order=None):
+            super(JaggedCompressorWithBitshuffle, self).__init__(dtype=dtype, shape=shape, order=order)
+            self.compressor = compressor(dtype=dtype, shape=shape, order=order)
+
+        def compress(self, x):
+            return self.compressor.compress(bitshuffle.bitshuffle(x))
+
+        def decompress(self, cx, dest=None):
+            x = bitshuffle.bitunshuffle(self.compressor.decompress(cx, dest=dest))
+            if dest is None:
+                return x
+            dest[:] = x
+            return dest
 
 
 # --- Utils
@@ -389,7 +410,7 @@ def cratio(x, compressor, check_roundtrip=True):
 if __name__ == '__main__':
 
     nr = 10000
-    compressibility = 1
+    compressibility = 2
     with_noise = True
 
     if compressibility == 0:  # this should not be very compressible, in any case...
@@ -403,15 +424,24 @@ if __name__ == '__main__':
     if with_noise:
         x += np.random.RandomState(0).randn(nr)
 
-    compressor = JaggedCompressorByBlosc(shuffle=False, bitshuffle=True, cname='lz4hc', clevel=5)
-    compressed = compressor.compress(x)
-    decompressed = compressor.decompress(compressed)
-    print('Compression ratio: %.2f' % cratio(x, compressor, check_roundtrip=True))
+    compressors = (
+        JaggedCompressorByBlosc(shuffle=False, bitshuffle=False, cname='lz4hc', clevel=5),
+        JaggedCompressorByBlosc(shuffle=True, bitshuffle=False, cname='lz4hc', clevel=5),
+        JaggedCompressorByBlosc(shuffle=False, bitshuffle=True, cname='lz4hc', clevel=5),
+        JaggedCompressorByBlosc(shuffle=False, bitshuffle=True, cname='lz4hc', clevel=5),
+        JaggedCompressorByBZ2(),
+        JaggedCompressorWithBitshuffle(JaggedCompressorByBZ2),
+        JaggedCompressorWithBitshuffle(JaggedCompressorByLZ4),
+        JaggedCompressorWithBitshuffle(JaggedCompressorByZSTD),
+        JaggedCompressorWithBitshuffle(JaggedCompressorByZLIB),
+    )
 
-    compressor = JaggedCompressorByBZ2()
-    compressed = compressor.compress(x)
-    decompressed = compressor.decompress(compressed)
-    print('Compression ratio: %.2f' % cratio(x, compressor, check_roundtrip=True))
+    for compressor in compressors:
+        cr = cratio(x, compressor, check_roundtrip=True)
+        c_time = timeit(lambda: compressor.compress(x), number=1000)
+        compressed = compressor.compress(x)
+        d_time = timeit(lambda: compressor.decompress(compressed), number=1000)
+        print('%s: cr=%.2f, ct=%.2f, dt=%.2f' % (compressor.what().id(), cr, c_time, d_time))
 
 # --- Random thoughts
 
