@@ -7,22 +7,23 @@ import os.path as op
 import shutil
 from time import time
 
-import bcolz
 import humanize
 import joblib
 import numpy as np
 import pandas as pd
 
+import bcolz
 from jagged.bcolz_backend import JaggedByCarray
 from jagged.benchmarks.utils import sync, available_ram, timestr, drop_caches, du, hostname
-from jagged.mmapcompressed_backend import JaggedByCompression
+from jagged.compressed_raw_backend import JaggedByCompression
 from jagged.bloscpack_backend import JaggedByBloscpack
-from jagged.compression.compressors import JaggedCompressorByBlosc
+from jagged.compressors import JaggedCompressorByBlosc
 from jagged.h5py_backend import JaggedByH5Py
 from jagged.misc import ensure_dir
 from jagged.mmap_backend import JaggedByMemMap
 from jagged.npy_backend import JaggedByNPY
 from jagged.pickle_backend import JaggedByPickle
+
 
 
 # --- Free{flight/swim} datasets

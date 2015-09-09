@@ -1,6 +1,5 @@
 # coding=utf-8
 from __future__ import print_function, unicode_literals, absolute_import, division
-from future.builtins import str
 from collections import defaultdict
 from copy import copy
 from glob import glob
@@ -10,12 +9,13 @@ import os.path as op
 from datetime import datetime
 from collections import OrderedDict
 
+from future.builtins import str
 import numpy as np
 import pandas as pd
 import humanize
 
 from jagged.benchmarks.utils import hostname, drop_caches
-from jagged.compression.compressors import JaggedCompressorByBlosc
+from jagged.compressors import JaggedCompressorByBlosc
 from jagged.misc import ensure_dir
 from whatami import whatable, what2id, What, id2what, whatid2columns
 
