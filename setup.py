@@ -21,7 +21,6 @@ setup(
     author='Santi Villalba',
     author_email='sdvillal@gmail.com',
     packages=['jagged',
-              'jagged.compression',
               'jagged.benchmarks',
               'jagged.tests'],
     classifiers=[
