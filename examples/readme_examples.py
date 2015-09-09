@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import tempfile
 from jagged.mmap_backend import JaggedByMemMap
-from jagged.mmapcompressed_backend import JaggedByCompression
+from jagged.compressed_raw_backend import JaggedByCompression
 
 # A Jagged instance is all you need
 mmap_dir = tempfile.mkdtemp('mmap')

@@ -5,7 +5,7 @@ import os.path as op
 from future.builtins import range
 
 from jagged.base import JaggedRawStore, JaggedJournal
-from jagged.compression.compressors import JaggedCompressorByBlosc
+from jagged.compressors import JaggedCompressorWithBitshuffle, JaggedCompressor
 from whatami import What
 
 
@@ -14,7 +14,7 @@ class JaggedByCompression(JaggedRawStore):
     # Memmapped
     # Not chunked - hope to keep using bcolz for that
 
-    def __init__(self, path=None, journal=None, compressor=JaggedCompressorByBlosc):
+    def __init__(self, path=None, journal=None, compressor=JaggedCompressorWithBitshuffle):
         super(JaggedByCompression, self).__init__(path, journal=journal)
         self.compressor = compressor
         self._mm = None
@@ -27,7 +27,7 @@ class JaggedByCompression(JaggedRawStore):
         return self._bjournal
 
     def _compressor(self):
-        if not isinstance(self.compressor, JaggedCompressorByBlosc):
+        if not isinstance(self.compressor, JaggedCompressor):
             self.compressor = self.compressor(dtype=self.dtype,
                                               shape=self.shape,
                                               order=self.order)
