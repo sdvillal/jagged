@@ -227,7 +227,7 @@ class JaggedCompressorByBlosc(JaggedCompressor):
     cname : string, default 'lz4hc'
       The compressor to use. As of blosc 1.7.0, this can be one of ('blosclz', 'snappy', 'lz4', 'lz4hz', 'zlib')
 
-    level : int, default 5
+    clevel : int, default 5
       Compression level, or how aggressive the compressor is (governs, for example, the size of blocks)
       The concrete meaning is dependent on the compressor used
 
