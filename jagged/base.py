@@ -5,7 +5,7 @@
  - Focus on reading performance, append only store.
  - Use numpy arrays as the canonical data carriers
  - May or may not restrict the type of the stored elements
- - Retrieve only by providing indices *collections*
+ - Retrieve only by providing *collections of indices*
    No explicit support for slice notation
  - All clases are whatami whatables
 """
@@ -24,11 +24,6 @@ import numpy as np
 
 from jagged.misc import ensure_dir
 from whatami import whatable
-
-try:
-    import cPickle as pickle
-except ImportError:  # pragma: no cover
-    import pickle
 
 
 # --- Journals (persitence of array lengths)
@@ -70,7 +65,13 @@ class JaggedJournal(object):
         self._numrows, self._numarrays = self._read_sizes()
 
     def append(self, data):
-        """Appends the data array to the journal."""
+        """Appends the data array to the journal.
+
+        Parameters
+        ----------
+        data : numpy array
+          The array that has been added to the jagged instance.
+        """
         self._add_length(data)
         self._add_sizes(data)
 
@@ -127,12 +128,24 @@ class JaggedJournal(object):
         return self._bases
 
     def start_end(self, index):
-        """Returns the start and end of the array at index."""
+        """Returns the start and end of the array at index.
+
+        Parameters
+        ----------
+        index : int
+          The index of the array in the journal
+        """
         base, size = self.base_size(index)
         return base, base + size
 
     def base_size(self, index):
-        """Returns the base and size of the array at index."""
+        """Returns the base and size of the array at index.
+
+        Parameters
+        ----------
+        index : int
+          The index of the array in the journal
+        """
         return self.bases()[index], self.lengths()[index]
 
     # --- Sanity checks
@@ -193,6 +206,11 @@ class JaggedRawStore(object):
     def can_add(self, data):
         """Returns True iff data can be stored.
         This usually means it is of the same kind as previously stored arrays.
+
+        Parameters
+        ----------
+        data : numpy array
+          The array we are considering for addition to the jagged store.
         """
         # Obviously we could just store arbitrary arrays in some implementations (e.g. NPY)
         # But lets keep jagged contracts...
@@ -241,7 +259,7 @@ class JaggedRawStore(object):
         """
         raise NotImplementedError()
 
-    def append(self, data):
+    def append(self, data, roundtrip_check=False):
         """Appends new data to this storage.
 
         If the storage is empty, this will define the dtype of the store.
@@ -250,6 +268,10 @@ class JaggedRawStore(object):
         ----------
         data : numpy-array like
           The data to append, must have a compatible dtype with what was already added to the store.
+
+        roundtrip_check : boolean, default False
+          If True, it will be checked that the retrieving the array produces data.
+          If roundtrip fails, an AssertionError is raised.
 
         Returns
         -------
@@ -274,8 +296,8 @@ class JaggedRawStore(object):
         assert self.can_add(data)
 
         # id log
-        if not op.isfile(op.join(self.path_or_fail(),  'meta', 'whatid.txt')):
-            ensure_dir(op.join(self.path_or_fail(),  'meta'))
+        if not op.isfile(op.join(self.path_or_fail(), 'meta', 'whatid.txt')):
+            ensure_dir(op.join(self.path_or_fail(), 'meta'))
             with open(op.join(self.path_or_fail(), 'meta', 'whatid.txt'), 'w') as writer:
                 writer.write(self.what().id())
 
@@ -289,6 +311,10 @@ class JaggedRawStore(object):
         index = self.journal().numarrays()
         self.journal().append(data)
 
+        # roundtrip check
+        if roundtrip_check:
+            np.testing.assert_array_equal(data, self.get([index])[0])
+
         # done
         return index
 
@@ -297,7 +323,15 @@ class JaggedRawStore(object):
         raise NotImplementedError()
 
     def append_from(self, jagged, arrays_per_chunk=None):
-        """Appends all the contents of jagged."""
+        """Appends all the contents of jagged.
+
+        Parameters
+        ----------
+        jagged : JaggedRawStore
+          Another jagged store.
+        arrays_per_chunk : int, default None
+          Corresponts to `arrays_per_chunk` in `iter_arrays`
+        """
         for chunk in jagged.iter_arrays(arrays_per_chunk=arrays_per_chunk):
             for data in chunk:
                 self.append(data)
@@ -352,7 +386,15 @@ class JaggedRawStore(object):
     # -- Iteration
 
     def iter_arrays(self, arrays_per_chunk=None):
-        """Iterates over the arrays in this store."""
+        """Iterates over the arrays in this store.
+
+        Parameters
+        ----------
+        arrays_per_chunk : int, default None
+          The number of arrays to retrieve on each fetch operation.
+          If None, each array will be fetch independently,
+          leading to less memory but potentially larger retrieval times.
+        """
         if arrays_per_chunk is None:
             for key in range(self.journal().numarrays()):
                 yield self.get([key])
@@ -504,7 +546,12 @@ class LinearRawStorage(JaggedRawStore):
         raise NotImplementedError()
 
     def iter_rows(self, rows_per_chunk):
-        """Reads rows_per_chunk rows at a time until all is read."""
+        """Reads rows_per_chunk rows at a time until all is read.
+
+        Parameters
+        ----------
+        rows_per_chunk
+        """
         base = 0
         total = len(self)
         while base < total:
@@ -540,7 +587,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
         dest = np.empty((total_size, nc), dtype=dtype)
         # Populate
         for order, base, dest_base, size in sorted(query_dest):
-            view = dest[dest_base:dest_base+size]
+            view = dest[dest_base:dest_base + size]
             view = reader(base, size, columns, view)
             views.append((order, view))
     elif contiguity == 'write':
@@ -549,7 +596,7 @@ def retrieve_contiguous(segments, columns, reader, dtype, ne, nc, contiguity):
         # Populate
         dest_base = 0
         for order, base, _, size in sorted(query_dest):
-            view = dest[dest_base:dest_base+size]
+            view = dest[dest_base:dest_base + size]
             view = reader(base, size, columns, view)
             dest_base += size
             views.append((order, view))
