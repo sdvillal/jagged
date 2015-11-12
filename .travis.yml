@@ -18,10 +18,11 @@ before_install:
  - conda config --set always_yes yes --set changeps1 no
  - conda update -q conda
  - conda info -a
- - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas toolz cython six
+ - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz hdf5 h5py pandas toolz cython six
  - source activate test
  - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
  - travis_retry pip install blosc bloscpack joblib psutil
+ - export CPATH="$HOME/miniconda/envs/test/include/"
  - travis_retry pip install https://github.com/kiyo-masui/bitshuffle/archive/0.2.1.tar.gz
  - travis_retry pip install whatami
 
