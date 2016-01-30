@@ -118,7 +118,7 @@ class JaggedJournal(object):
 
     def lengths(self):
         """Returns an array with the length of each array added to the journal."""
-        return self._read_lengths()
+        return self._lengths
 
     def bases(self):
         """Returns where each array would start if the storage is linear."""
