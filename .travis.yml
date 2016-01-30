@@ -15,7 +15,8 @@ before_install:
  - export PATH="$HOME/miniconda/bin:$PATH"
  - hash -r
  - conda config --set always_yes yes --set changeps1 no
- - conda update -q conda- conda info -a
+ - conda update -q conda
+ - conda info -a
  - travis_retry conda create -n test python=$TRAVIS_PYTHON_VERSION pip pytest numpy future bcolz h5py pandas toolz
  - source activate test
  - travis_retry pip install arpeggio pytest-cov pytest-pep8 codecov scrutinizer-ocular
