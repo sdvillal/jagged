@@ -3,7 +3,6 @@
 from __future__ import print_function, absolute_import, unicode_literals
 from future.builtins import zip
 import os.path as op
-import bcolz
 from .fixtures import *
 from jagged.base import retrieve_contiguous
 from jagged.misc import ensure_dir
@@ -168,6 +167,7 @@ def test_roundtrip(jagged_raw, dataset, columns):
 # --- Test self-identification
 
 def test_whatid():
+    import bcolz  # FIXME: optional also for tests
     assert "JaggedByCarray(chunklen=1000," \
            "contiguity=None," \
            "cparams=cparams(clevel=3,cname='zlib',shuffle=False)," \
