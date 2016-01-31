@@ -52,9 +52,29 @@ def test_lifecycle(jagged_raw):
         # and the data will be properlly appended
         assert np.allclose(data0, jr.get()[0])
         assert np.allclose(data1, jr.get()[1])
+        # all the retrieved data will have the proper order
+        flag = 'C_CONTIGUOUS' if jr.order == 'C' else 'F_CONTIGUOUS '
+        assert jr.get()[0].flags[flag]
+        assert jr.get()[1].flags[flag]
 
 
-# -- Tests retrieve contiguous
+# -- order tests
+
+def test_order(jagged_raw):
+    jagged_raw, path = jagged_raw
+    x = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    x_fortran = np.require(x, requirements=['F'])
+    x_view = x[::2, ::2]
+    with jagged_raw(path=path) as jr:
+        index = jr.append(x)
+        assert np.allclose(x, jr.get()[index])
+        index = jr.append(x_fortran)
+        assert np.allclose(x_fortran, jr.get()[index])
+        index = jr.append(x_view)
+        assert np.allclose(x_view, jr.get()[index])
+
+
+# -- retrieve contiguous tests
 
 def test_retrieve_contiguous(mock_jagged_raw, columns, contiguity):
 

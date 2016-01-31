@@ -1,6 +1,8 @@
 # coding=utf-8
 from __future__ import print_function, absolute_import, unicode_literals
 
+from itertools import product
+
 import numpy as np
 import pytest
 
@@ -19,9 +21,10 @@ LINEAR_RAW_STORES = (
     ('jr=mmap', JaggedByMemMap),
 )
 
-for contiguity in ('read', 'write', None, 'auto'):
+for contiguity, order in product(('read', 'write', None, 'auto'), ('C', 'F')):
     for name, store in LINEAR_RAW_STORES:
-        RAW_STORES.append((name + '#' + 'cont=%s' % contiguity, partial(store, contiguity=contiguity)))
+        RAW_STORES.append((name + '#' + 'cont=%s' % contiguity + '#' + 'order=%s' % order,
+                           partial(store, contiguity=contiguity, order=order)))
 
 RAW_STORES.extend([
     ('jr=npy', JaggedByNPY),
