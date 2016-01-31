@@ -170,6 +170,7 @@ class JaggedRawStore(object):
         # row-major or column major order?
         if order not in ('C', 'F'):
             raise ValueError('Order must be one of "C" or "F"')
+        self._order = order
         self._path = path
         if self._path is not None:
             ensure_dir(self._path)
