@@ -11,6 +11,7 @@ class JaggedByBloscpack(JaggedByNPY):
     def __init__(self,
                  path=None,
                  journal=None,
+                 order='C',
                  # blosc
                  clevel=5,
                  shuffle=True,

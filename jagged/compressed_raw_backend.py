@@ -14,8 +14,8 @@ class JaggedByCompression(JaggedRawStore):
     # Memmapped
     # Not chunked - hope to keep using bcolz for that
 
-    def __init__(self, path=None, journal=None, compressor=JaggedCompressorWithBitshuffle):
-        super(JaggedByCompression, self).__init__(path, journal=journal)
+    def __init__(self, path=None, journal=None, order='C', compressor=JaggedCompressorWithBitshuffle):
+        super(JaggedByCompression, self).__init__(path, journal=journal, order=order)
         self.compressor = compressor
         self._mm = None
         self._writing = None

@@ -10,8 +10,8 @@ from jagged.base import LinearRawStorage
 class JaggedByMemMap(LinearRawStorage):
     """Provides numpy arrays as views of an underlying memmapped array."""
 
-    def __init__(self, path=None, journal=None, contiguity=None, autoviews=True):
-        super(JaggedByMemMap, self).__init__(path, journal=journal, contiguity=contiguity)
+    def __init__(self, path=None, journal=None, order='C', contiguity=None, autoviews=True):
+        super(JaggedByMemMap, self).__init__(path, journal=journal, order=order, contiguity=contiguity)
 
         if self._path is not None:
             self._mmpath = op.join(self._path, 'data.mm')

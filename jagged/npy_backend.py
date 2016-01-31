@@ -11,8 +11,8 @@ from jagged.misc import ensure_dir
 class JaggedByNPY(JaggedRawStore):
     """Stores each array in an individual .npy file."""
 
-    def __init__(self, path=None, journal=None):
-        super(JaggedByNPY, self).__init__(path, journal=journal)
+    def __init__(self, path=None, journal=None, order='C'):
+        super(JaggedByNPY, self).__init__(path, journal=journal, order=order)
         self._shards = None
         if path is not None:
             self._all_shards()

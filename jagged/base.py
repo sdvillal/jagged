@@ -165,8 +165,11 @@ class JaggedRawStore(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, path, journal=None):
+    def __init__(self, path, journal=None, order='C'):
         super(JaggedRawStore, self).__init__()
+        # row-major or column major order?
+        if order not in ('C', 'F'):
+            raise ValueError('Order must be one of "C" or "F"')
         self._path = path
         if self._path is not None:
             ensure_dir(self._path)
@@ -201,7 +204,8 @@ class JaggedRawStore(object):
     def _write_template(self, data):
         template_dir = ensure_dir(op.join(self.path_or_fail(), 'meta', 'template'))
         template_path = op.join(template_dir, 'template.npy')
-        np.save(template_path, data[:0])
+        template = np.require(data[:0], requirements=[self._order])
+        np.save(template_path, template)
 
     def can_add(self, data):
         """Returns True iff data can be stored.
@@ -218,8 +222,7 @@ class JaggedRawStore(object):
         if template is None:
             return True
         return (template.dtype >= data.dtype and
-                data.shape[-1] == template.shape[-1] and
-                np.isfortran(data) == np.isfortran(data))
+                data.shape[-1] == template.shape[-1])
 
     # --- Lifecycle
 
@@ -304,6 +307,9 @@ class JaggedRawStore(object):
         # open
         self._open_write(data)
 
+        # ensure that data is in the right order
+        data = self._ensure_writing_format(data)
+
         # write
         self._append_hook(data)
 
@@ -321,6 +327,15 @@ class JaggedRawStore(object):
     def _append_hook(self, data):
         """Saves the data, returns nothing."""
         raise NotImplementedError()
+
+    def _ensure_writing_format(self, data):
+        """Ensures that the array is in a format suitable for writing.
+
+        By default, this ensures that data is contiguous in row-major or column-major order.
+        Doing this by default makes view handling much less complicated.
+        We probably could relax this on backends that do not access directly the buffer.
+        """
+        return np.require(data, requirements=[self._order])
 
     def append_from(self, jagged, arrays_per_chunk=None):
         """Appends all the contents of jagged.
@@ -498,7 +513,7 @@ class LinearRawStorage(JaggedRawStore):
 
     __metaclass__ = ABCMeta  # no harm, lint stops complaining
 
-    def __init__(self, path, journal=None, contiguity=None):
+    def __init__(self, path, journal=None, contiguity=None, order='C'):
         """
         A linear raw storage can access arbitrary rows using base (row index in the storage) and size
         (number of rows to retrieve).
@@ -524,7 +539,7 @@ class LinearRawStorage(JaggedRawStore):
            beware that forcing contiguity for speed might lead to memory leaks
            (the whole retrieved segments won't be released while any of them is reacheable)
         """
-        super(LinearRawStorage, self).__init__(path, journal=journal)
+        super(LinearRawStorage, self).__init__(path, journal=journal, order=order)
         self.contiguity = contiguity
 
     def _get_views(self, keys, columns):

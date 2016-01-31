@@ -46,12 +46,13 @@ class JaggedByCarray(LinearRawStorage):
                  path=None,
                  journal=None,
                  contiguity=None,
+                 order='C',
                  # bcolz params
                  expectedlen=None,
                  chunklen=1024 ** 2 // 2,  # 500K rows
                  cparams=bcolz.cparams(clevel=5, shuffle=False, cname='lz4hc')):
 
-        super(JaggedByCarray, self).__init__(path, journal=journal, contiguity=contiguity)
+        super(JaggedByCarray, self).__init__(path, journal=journal, order=order, contiguity=contiguity)
 
         self.expectedlen = expectedlen
         self.chunklen = chunklen

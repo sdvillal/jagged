@@ -5,8 +5,12 @@ from jagged.pickle_backend import JaggedByPickle
 
 class JaggedByJoblib(JaggedByPickle):
 
-    def __init__(self, path=None, journal=None, arrays_per_chunk=1000, compress=False):
-        super(JaggedByJoblib, self).__init__(path, journal, arrays_per_chunk, compress)
+    def __init__(self, path=None, journal=None, order='C', arrays_per_chunk=1000, compress=False):
+        super(JaggedByJoblib, self).__init__(path,
+                                             journal=journal,
+                                             order=order,
+                                             arrays_per_chunk=arrays_per_chunk,
+                                             compress=compress)
 
     def _load(self, path):
         self._cache = joblib.load(path)

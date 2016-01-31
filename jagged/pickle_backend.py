@@ -12,8 +12,8 @@ except ImportError:  # pragma: no cover
 class JaggedByPickle(JaggedRawStore):
     """A chunked store based on pickle."""
 
-    def __init__(self, path=None, journal=None, arrays_per_chunk=1000, compress=False):
-        super(JaggedByPickle, self).__init__(path, journal)
+    def __init__(self, path=None, journal=None, order='C', arrays_per_chunk=1000, compress=False):
+        super(JaggedByPickle, self).__init__(path, journal=journal, order=order)
         self.arrays_per_chunk = arrays_per_chunk
         self.compress = compress
         self._cache = []

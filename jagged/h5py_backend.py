@@ -12,6 +12,7 @@ class JaggedByH5Py(LinearRawStorage):
     def __init__(self,
                  path=None,
                  journal=None,
+                 order='C',
                  contiguity=None,
                  # hdf params
                  dset_name='data',
@@ -20,7 +21,7 @@ class JaggedByH5Py(LinearRawStorage):
                  compression_opts=None,
                  shuffle=False,
                  checksum=False):
-        super(JaggedByH5Py, self).__init__(path, journal=journal, contiguity=contiguity)
+        super(JaggedByH5Py, self).__init__(path, journal=journal, order=order, contiguity=contiguity)
 
         self._dset_name = dset_name
 
