@@ -257,7 +257,7 @@ The castra_ project is worth a look.
 .. |Pypi Version| image:: https://badge.fury.io/py/jagged.svg
    :target: http://badge.fury.io/py/jagged
 .. |Build Status| image:: https://travis-ci.org/sdvillal/jagged.svg?branch=master
-   :target: https://travis-ci.org/sdvillal/jagged
+   :target: https://travis-ci.org/sdvillal/jagged/branches
 .. |Coverage Status| image:: http://codecov.io/github/sdvillal/jagged/coverage.svg?branch=master
    :target: http://codecov.io/github/sdvillal/jagged?branch=master
 .. |Scrutinizer Status| image:: https://scrutinizer-ci.com/g/sdvillal/jagged/badges/quality-score.png?b=master
