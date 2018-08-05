@@ -148,9 +148,10 @@ def test_roundtrip(jagged_raw, dataset, columns):
 # --- Test self-identification
 
 def test_whatid():
+
     assert "JaggedByCarray(chunklen=1000," \
            "contiguity=None," \
-           "cparams=cparams(clevel=3,cname='zlib',shuffle=False)," \
+           "cparams=cparams(clevel=3,cname='zlib',quantize=0,shuffle=False)," \
            "expectedlen=None)" \
            == JaggedByCarray(chunklen=1000,
                              cparams=bcolz.cparams(clevel=3, cname='zlib', shuffle=False),
